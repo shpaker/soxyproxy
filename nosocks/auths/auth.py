@@ -1,6 +1,3 @@
-import logging
-
-
 class Auth:
     '''
     X'00' NO AUTHENTICATION REQUIRED
@@ -16,8 +13,8 @@ class Auth:
         self.method = method
 
 
-    def auth(self):
-        pass
+    def auth(self, reader, writer):
+        raise NotImplemented
 
     def __str__(self):
         return 'Authentication method {} - {}'.format(self.method.value,

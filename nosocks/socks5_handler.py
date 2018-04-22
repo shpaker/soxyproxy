@@ -19,11 +19,11 @@ class Socks5Handler:
 
         self.client_ip, self.client_port = writer.get_extra_info('peername')
 
-    def greet(self, client_greeting):
+    def handshake(self, client_greeting):
         # todo except return nothing
-        auth = self.choose_auth_method(client_greeting.methods)
+        auth_method = self.choose_auth_method(client_greeting.methods)
 
-        server_greeting = ServerGreeting(auth.method)
+        server_greeting = ServerGreeting(auth_method)
 
         self.writer.write(server_greeting.to_bytes())
 
@@ -38,16 +38,7 @@ class Socks5Handler:
         return server_replay
 
     def choose_auth_method(self, client_methods):
-        for auth_id in client_methods:
-            if auth_id in self.auth_methods:
+        for auth_method in client_methods:
+            if auth_method in self.auth_methods:
 
-                # todo: validate ID
-                auth = None
-
-                if auth_id == METHOD.NO_AUTHENTICATION:
-                    auth = NoneAuth()
-
-                if auth_id == METHOD.USERNAME_PASSWORD:
-                    auth = BasicAuth()
-
-                return auth
+                return auth_method

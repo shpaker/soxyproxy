@@ -8,11 +8,21 @@ IPv6_OCTET_LENGTH = 16
 
 
 @unique
+class SOCKS(Enum):
+    SOCKS4 = 4
+    SOCKS5 = 5
+
+@unique
 class METHOD(Enum):
     NO_AUTHENTICATION = 0
     GSSAPI = 1
     USERNAME_PASSWORD = 2
     NO_ACCEPTABLE = 255
+
+@unique
+class AUTH_STATUS(Enum):
+    SUCCESS = 0
+    FAIL = 1
 
 @unique
 class ATYP(Enum):

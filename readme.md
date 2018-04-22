@@ -6,6 +6,10 @@
   * [ ] SOCKS4
   * [x] SOCKS5
 
+* Protocols
+  * [x] TCP
+  * [ ] UDP
+
 * Auth
   * [x] None
   * [ ] Login/Password
@@ -21,4 +25,4 @@
   * [x] IPv6
   * [ ] Domain
 
-* [ ]Rulesets
+* [ ] Rulesets

@@ -2,8 +2,11 @@ import asyncio
 import logging
 from functools import partial
 
+from .auths.basic_auth import BasicAuth
+from .auths.none_auth import NoneAuth
 from .consts import METHOD
 from .consts import SOCKS_PORT
+from .messages.auth_username_request import AuthUsernameRequest
 from .messages.client_greeting import ClientGreeting
 from .messages.client_request import ClientRequest
 from .socks5_handler import Socks5Handler
@@ -11,13 +14,16 @@ from .socks5_handler import Socks5Handler
 
 class Server:
 
-    def __init__(self, host='0.0.0.0', port=SOCKS_PORT, socks_version=5, auth_methods=[METHOD.NO_AUTHENTICATION]):
+    def __init__(self, host='0.0.0.0', port=SOCKS_PORT, socks_version=5, auth_methods=[METHOD.USERNAME_PASSWORD],
+                 username='user1', password='secret1'):
         self.host = host
         self.port = port
         self.socks_version = socks_version
 
         self.auth_methods = [auth_methods] if isinstance(auth_methods, int) else auth_methods
-        self.auth_methods.sort()
+
+        self.username = username
+        self.password = password
 
     def log(self, client_addr, message, incoming=True, debug=False):
         arrow= '>' if incoming else '<'
@@ -35,19 +41,35 @@ class Server:
         client_greeting = ClientGreeting(greeting_data)
 
         self.log(client_addr, client_greeting)
-        # self.log(client_addr, greeting_data, debug=True)
 
         # close connection if invalid version of client's protocol
         if client_greeting.ver != self.socks_version:
             logging.warning('unsupported version in request: {}'.format(client_greeting.ver))
             writer.close()
 
-        # greeting
+        # handshake
         if client_greeting.ver == 5:
             socks_handle = Socks5Handler(reader, writer, auth_methods)
-            server_greeting = socks_handle.greet(client_greeting)
+            server_greeting = socks_handle.handshake(client_greeting)
 
             self.log(client_addr, server_greeting, incoming=False)
+
+        # auth
+        if server_greeting.method == METHOD.NO_AUTHENTICATION:
+            auth = NoneAuth()
+        elif server_greeting.method == METHOD.USERNAME_PASSWORD:
+            auth_data = await reader.read(512)
+
+            auth_username = AuthUsernameRequest(auth_data)
+
+
+            self.log(client_addr, auth_username)
+
+            auth = BasicAuth(auth_username)
+
+            auth_reply = auth.auth(reader, writer, self.username, self.password)
+
+            self.log(client_addr, auth_reply, incoming=False)
 
         # request-reply
         request_data = await reader.read(512)
@@ -61,9 +83,9 @@ class Server:
 
         await self.splice(reader, writer, client_request)
 
-        request_data = await reader.read(4096)
-
-        logging.info(request_data)
+        # request_data = await reader.read(4096)
+        #
+        # logging.info(request_data)
 
         await writer.drain()
 
@@ -83,7 +105,7 @@ class Server:
         remote_read = asyncio.ensure_future(remote_reader.read(1024))
 
         while True:
-            logging.debug('LOOP')
+            # logging.debug('LOOP')
             done, pending = await asyncio.wait([client_read, remote_read],
                                                return_when=asyncio.FIRST_COMPLETED)
             if client_read in done:
@@ -95,7 +117,7 @@ class Server:
                 remote_writer.write(data)
                 await remote_writer.drain()
                 client_read = asyncio.ensure_future(client_reader.read(1024))
-                logging.debug('CLIENT_READ {}'.format(data))
+                # self.log(client_addr)
 
             if remote_read in done:
                 data = remote_read.result()
@@ -107,7 +129,7 @@ class Server:
                 await client_writer.drain()
 
                 remote_read = asyncio.ensure_future(remote_reader.read(1024))
-                logging.debug('REMOTE_READ {}'.format(data))
+                # logging.debug('REMOTE_READ {}'.format(data))
 
         client_read.cancel()
         remote_read.cancel()
