@@ -1,4 +1,4 @@
-class AuthUsernameReply():
+class UsernameAuthServer:
     '''
     +----+--------+
     |VER | STATUS |

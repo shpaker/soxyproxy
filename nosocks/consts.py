@@ -1,19 +1,25 @@
 from enum import Enum, unique
-
+from ipaddress import IPv4Network
 
 SOCKS_PORT = 1080
 
 IPv4_OCTET_LENGTH = 4
 IPv6_OCTET_LENGTH = 16
 
+DEFAULT_NETWORK = IPv4Network('0.0.0.0/0')
 
 @unique
-class SOCKS(Enum):
+class RULE_ACTION(Enum):
+    ALLOW = True
+    DENY = False
+
+@unique
+class PROTOCOL(Enum):
     SOCKS4 = 4
     SOCKS5 = 5
 
 @unique
-class METHOD(Enum):
+class AUTH_METHOD(Enum):
     NO_AUTHENTICATION = 0
     GSSAPI = 1
     USERNAME_PASSWORD = 2

@@ -1,9 +1,7 @@
-import ipaddress
-from ..consts import get_enum_member
-from ..consts import CMD, ATYP
+from ..consts import ATYP
 
 
-class ServerReply:
+class ReplyServer:
     '''
     +----+-----+-------+------+----------+----------+
     |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |

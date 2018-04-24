@@ -1,4 +1,4 @@
-class ServerGreeting():
+class HandshakeServer:
     '''
     +----+--------+
     |VER | METHOD |

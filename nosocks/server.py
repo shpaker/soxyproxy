@@ -1,20 +1,31 @@
 import asyncio
 import logging
 from functools import partial
+from enum import Enum, unique
 
-from .auths.basic_auth import BasicAuth
+from .auths.username_auth import UsernameAuth
 from .auths.none_auth import NoneAuth
-from .consts import METHOD
+
+from .consts import AUTH_METHOD
 from .consts import SOCKS_PORT
-from .messages.auth_username_request import AuthUsernameRequest
-from .messages.client_greeting import ClientGreeting
-from .messages.client_request import ClientRequest
+
+from .messages.username_auth_client import UsernameAuthClient
+from .messages.handshake_client import HandshakeClient
+from .messages.request_client import RequestClient
+
 from .socks5_handler import Socks5Handler
+
+
+@unique
+class LOGTYPE(Enum):
+    INCOMING = '{from} > {to}'
+    OUTGOING = 1
+    NOTIFY = '{client_ip} - {message}'
 
 
 class Server:
 
-    def __init__(self, host='0.0.0.0', port=SOCKS_PORT, socks_version=5, auth_methods=[METHOD.USERNAME_PASSWORD],
+    def __init__(self, host='0.0.0.0', port=SOCKS_PORT, socks_version=5, auth_methods=[AUTH_METHOD.USERNAME_PASSWORD],
                  username='user1', password='secret1'):
         self.host = host
         self.port = port
@@ -38,7 +49,7 @@ class Server:
         client_ip, client_port = writer.get_extra_info('peername')
         client_addr = '{}:{}'.format(client_ip, client_port)
 
-        client_greeting = ClientGreeting(greeting_data)
+        client_greeting = HandshakeClient(greeting_data)
 
         self.log(client_addr, client_greeting)
 
@@ -55,17 +66,17 @@ class Server:
             self.log(client_addr, server_greeting, incoming=False)
 
         # auth
-        if server_greeting.method == METHOD.NO_AUTHENTICATION:
+        if server_greeting.method == AUTH_METHOD.NO_AUTHENTICATION:
             auth = NoneAuth()
-        elif server_greeting.method == METHOD.USERNAME_PASSWORD:
+        elif server_greeting.method == AUTH_METHOD.USERNAME_PASSWORD:
             auth_data = await reader.read(512)
 
-            auth_username = AuthUsernameRequest(auth_data)
+            auth_username = UsernameAuthClient(auth_data)
 
 
             self.log(client_addr, auth_username)
 
-            auth = BasicAuth(auth_username)
+            auth = UsernameAuth(auth_username)
 
             auth_reply = auth.auth(reader, writer, self.username, self.password)
 
@@ -73,7 +84,7 @@ class Server:
 
         # request-reply
         request_data = await reader.read(512)
-        client_request = ClientRequest(request_data)
+        client_request = RequestClient(request_data)
 
         self.log(client_addr, client_request)
         # self.log(client_addr, '{} > {}'.format(request_data, list(request_data)), debug=True)

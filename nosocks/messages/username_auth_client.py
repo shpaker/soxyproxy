@@ -1,4 +1,4 @@
-class AuthUsernameRequest:
+class UsernameAuthClient:
     '''
     +----+------+----------+------+----------+
     |VER | ULEN |  UNAME   | PLEN |  PASSWD  |

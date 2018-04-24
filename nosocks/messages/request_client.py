@@ -1,9 +1,10 @@
 from ipaddress import IPv4Address, IPv6Address, IPV4LENGTH, IPV6LENGTH
-from ..consts import get_enum_member
+
 from ..consts import CMD, ATYP
+from ..consts import get_enum_member
 
 
-class ClientRequest():
+class RequestClient:
     '''
     +----+-----+-------+------+----------+----------+
     |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |

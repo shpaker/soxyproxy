@@ -1,8 +1,8 @@
-from .auths.basic_auth import BasicAuth
+from .auths.username_auth import UsernameAuth
 from .auths.none_auth import NoneAuth
-from .consts import METHOD
-from .messages.server_greeting import ServerGreeting
-from .messages.server_reply import ServerReply
+from .consts import AUTH_METHOD
+from .messages.handshake_server import HandshakeServer
+from .messages.reply_server import ReplyServer
 from .consts import REP
 
 
@@ -23,14 +23,14 @@ class Socks5Handler:
         # todo except return nothing
         auth_method = self.choose_auth_method(client_greeting.methods)
 
-        server_greeting = ServerGreeting(auth_method)
+        server_greeting = HandshakeServer(auth_method)
 
         self.writer.write(server_greeting.to_bytes())
 
         return server_greeting
 
     def process_request(self, client_request):
-        server_replay = ServerReply(REP.SUCCEEDED, client_request.dst_addr, client_request.dst_port)
+        server_replay = ReplyServer(REP.SUCCEEDED, client_request.dst_addr, client_request.dst_port)
 
         response = server_replay.to_bytes()
         self.writer.write(response)
