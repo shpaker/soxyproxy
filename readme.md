@@ -12,7 +12,7 @@
 
 * Auth
   * [x] None
-  * [ ] Login/Password
+  * [x] Login/Password
   * [ ] GSSAPI
 
 * CMC
