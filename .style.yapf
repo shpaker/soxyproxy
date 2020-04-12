@@ -1,0 +1,7 @@
+[style]
+based_on_style = pep8
+allow_split_before_dict_value: true
+blank_line_before_nested_class_or_def = true
+coalesce_brackets = true
+column_limit = 120
+spaces_before_comment = 2

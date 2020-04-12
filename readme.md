@@ -3,7 +3,7 @@
 ## Features
 
 * Protocols
-  * [ ] SOCKS4
+  * [x] SOCKS4
   * [x] SOCKS5
 
 * Protocols
@@ -23,6 +23,6 @@
 * ADDR
   * [x] IPv4
   * [x] IPv6
-  * [ ] Domain
+  * [x] Domain
 
 * [ ] Rulesets
