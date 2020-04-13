@@ -1,2 +1,4 @@
-PORT_BYTES_LENGTH = 2
-PORT_BYTES_ORDER = 'big'
+from .conection.connection_request import ConnectionRequest
+from .conection.connection_response import ConnectionResponse
+
+__all__ = ['ConnectionRequest', 'ConnectionResponse']

@@ -1,44 +1,35 @@
 from asyncio import StreamReader, StreamWriter, open_connection
-from dataclasses import asdict
+from typing import Optional
 
-from noSocks.socks.exceptions import SocksConnectionError
-from noSocks.socks.connection_data import ConnectionData
-from noSocks.socks4.codes import ReplyCodes
-from noSocks.socks4 import request_from_bytes
-from noSocks.socks4 import Response
-from noSocks.socks.socks_abstract import SocksAbstract
+from . import ConnectionRequest, ConnectionResponse, ReplyCodes
+from .. import Socks
+from ..socks_versions import SocksVersions
 
 
-class Socks4(SocksAbstract):
+class Socks4(Socks):
 
-    def __init__(self, client_reader: StreamReader, client_writer: StreamWriter) -> None:
-        super().__init__(client_reader, client_writer)
+    def __init__(self) -> None:
+        super().__init__(SocksVersions.SOCKS4)
 
-    async def connect(self):
+    async def connect(self, client_reader: StreamReader, client_writer: StreamWriter) -> (StreamReader, StreamWriter):
 
-        data = await self.client.reader.read(512)
-        request = request_from_bytes(data)
-
-        self.logger.info(
-            f'{self.client} -> SOCKS{request.socks_version.name} request to {request.remote_address}:{request.remote_port}'
-        )
+        request_raw = await client_reader.read(512)
+        response: Optional[ConnectionResponse] = None
 
         try:
-            _remote_reader, _remote_writer = await open_connection(host=str(request.remote_address),
-                                                                   port=request.remote_port)
+            request = ConnectionRequest.from_bytes(request_raw)
+            self._log_message(client_writer, request)
+            remote_reader, remote_writer = await open_connection(host=str(request.address), port=request.port)
+            response = ConnectionResponse(reply=ReplyCodes.GRANTED, address=request.address, port=request.port)
+            return remote_reader, remote_writer
         except (OSError, TimeoutError):
-            response = Response(reply_code=ReplyCodes.rejected,
-                                destination_address=request.remote_address,
-                                destination_port=request.remote_port)
+            response = ConnectionResponse(reply=ReplyCodes.REJECTED,
+                                          address=ConnectionRequest.get_address_from_raw(request_raw),
+                                          port=ConnectionRequest.get_port_from_raw(request_raw))
+        finally:
+            if response:
+                self._log_message(client_writer, response)
+                client_writer.write(response.as_bytes)
 
-            raise SocksConnectionError(response=response.as_bytes)
-
-        self.remote = ConnectionData(reader=_remote_reader, writer=_remote_writer)
-
-        response = Response(reply_code=ReplyCodes.granted,
-                            destination_address=request.remote_address,
-                            destination_port=request.remote_port)
-
-        self.logger.info(f'{self.client} <- {asdict(response)}')
-
-        self.client.writer.write(response.as_bytes)
+            if response and response.reply is not ReplyCodes.GRANTED:
+                raise ConnectionError(response.reply.name)

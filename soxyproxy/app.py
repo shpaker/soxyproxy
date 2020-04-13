@@ -4,8 +4,7 @@ from typing import Optional, Coroutine
 
 from typer import Option, Typer, echo, BadParameter
 
-from soxyproxy import Socks5
-from soxyproxy.socks import Socks
+from soxyproxy import Socks, Socks5, Socks4
 
 app = Typer()
 logging.basicConfig(format='[%(asctime)s] %(levelname)-8s %(message)s', level=logging.DEBUG)
@@ -15,13 +14,9 @@ DEFAULT_PORT = 1080
 
 
 @app.command()
-def socks4():
-    print('4')
-
-
-@app.command()
-def socks4a():
-    print('4a')
+def socks4(host: str = Option(DEFAULT_HOST), port: int = Option(DEFAULT_PORT)) -> None:
+    server = Socks4()
+    start_server(server=server, host=host, port=port)
 
 
 @app.command()
@@ -30,11 +25,10 @@ def socks5(host: str = Option(DEFAULT_HOST),
            username: Optional[str] = Option(None),
            password: Optional[str] = Option(None)) -> None:
 
-    if username and not password:
-        raise BadParameter('empty password not allowed', param_hint='--password')
+    if username and not password or not username and password:
+        raise BadParameter('please, specify username and password')
 
     server = Socks5(username=username, password=password)
-
     start_server(server=server, host=host, port=port)
 
 
