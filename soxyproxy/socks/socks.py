@@ -12,8 +12,6 @@ READ_BYTES_DEFAULT = 1024
 
 logger = getLogger(__name__)
 
-__all__ = ['Socks']
-
 
 class Socks(ABC):
 
@@ -26,12 +24,10 @@ class Socks(ABC):
 
         try:
             await self.serve_client(client_reader=client_reader, client_writer=client_writer)
-
         except ValueError as err:
             logger.warning(f'{host}:{port} package error: {err}')
         except ConnectionError as err:
             logger.warning(f'{host}:{port} connection error: {err}')
-
         finally:
             if not client_writer.is_closing():
                 await client_writer.drain()

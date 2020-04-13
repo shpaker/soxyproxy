@@ -1,4 +1,5 @@
+from soxyproxy.socks import Socks
+from soxyproxy.socks4 import Socks4
 from soxyproxy.socks5 import Socks5
-from soxyproxy.app import app
 
-__all__ = ['Socks5', 'app']
+__all__ = ['Socks', 'Socks4', 'Socks5']

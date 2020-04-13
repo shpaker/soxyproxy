@@ -20,10 +20,9 @@ class HandshakeRequest(ProtocolRequest):
 
         try:
             socks_version = SocksVersions(raw[SOCKS_VERSION_INDEX])
+            if socks_version != SocksVersions.SOCKS5:
+                raise ValueError
         except (ValueError, IndexError):
-            raise ValueError(f'incorrect handshake package: {raw}')
-
-        if socks_version != SocksVersions.SOCKS5:
             raise ValueError(f'incorrect handshake package: {raw}')
 
         auth_methods_count: int = raw[AUTH_METHODS_COUNT_INDEX]

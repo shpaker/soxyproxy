@@ -26,9 +26,8 @@ class Socks5(Socks):
 
     async def handshake(self, client_reader: StreamReader, client_writer: StreamWriter):
 
-        incoming_bytes = await client_reader.read(512)
-
-        request = HandshakeRequest.from_bytes(raw=incoming_bytes)
+        request_raw = await client_reader.read(512)
+        request = HandshakeRequest.from_bytes(raw=request_raw)
         self._log_message(client_writer, message=request)
 
         if self.auth_method not in request.auth_methods:
@@ -45,8 +44,8 @@ class Socks5(Socks):
             return
 
         if self.auth_method is AuthMethods.USERNAME:
-            raw_bytes = await client_reader.read(128)
-            request = UsernameAuthRequest.from_bytes(raw_bytes)
+            request_raw = await client_reader.read(128)
+            request = UsernameAuthRequest.from_bytes(request_raw)
 
             self._log_message(client_writer, request)
 
@@ -63,30 +62,30 @@ class Socks5(Socks):
 
     async def connect(self, client_reader: StreamReader, client_writer: StreamWriter) -> (StreamReader, StreamWriter):
 
-        request_data = await client_reader.read(512)
+        request_raw = await client_reader.read(512)
         response: Optional[ConnectionResponse] = None
 
         try:
-            request = ConnectionRequest.from_bytes(request_data)
+            request = ConnectionRequest.from_bytes(request_raw)
             self._log_message(client_writer, request)
             remote_reader, remote_writer = await asyncio.open_connection(host=str(request.address), port=request.port)
-            response = ConnectionResponse(reply_code=ReplyCodes.SUCCEEDED, address=request.address, port=request.port)
+            response = ConnectionResponse(reply=ReplyCodes.SUCCEEDED, address=request.address, port=request.port)
             return remote_reader, remote_writer
         except socket.gaierror:
-            response = ConnectionResponse(reply_code=ReplyCodes.HOST_UNREACHABLE,
-                                          address=ConnectionRequest.get_domain_name_from_raw(request_data),
-                                          port=ConnectionRequest.get_port_from_raw(request_data))
+            response = ConnectionResponse(reply=ReplyCodes.HOST_UNREACHABLE,
+                                          address=ConnectionRequest.get_domain_name_from_raw(request_raw),
+                                          port=ConnectionRequest.get_port_from_raw(request_raw))
         except (OSError, TimeoutError):
-            response = ConnectionResponse(reply_code=ReplyCodes.HOST_UNREACHABLE,
-                                          address=ConnectionRequest.get_address_from_raw(request_data),
-                                          port=ConnectionRequest.get_port_from_raw(request_data))
+            response = ConnectionResponse(reply=ReplyCodes.HOST_UNREACHABLE,
+                                          address=ConnectionRequest.get_address_from_raw(request_raw),
+                                          port=ConnectionRequest.get_port_from_raw(request_raw))
         finally:
             if response:
                 self._log_message(client_writer, response)
                 client_writer.write(response.as_bytes)
 
-            if response and response.reply_code is not ReplyCodes.SUCCEEDED:
-                raise ConnectionError(f'connection error {response.reply_code.name}')
+            if response and response.reply is not ReplyCodes.SUCCEEDED:
+                raise ConnectionError(response.reply.name)
 
     async def serve_client(self, client_reader: StreamReader, client_writer: StreamWriter):
         await self.handshake(client_reader=client_reader, client_writer=client_writer)
