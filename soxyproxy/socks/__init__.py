@@ -1,5 +1,5 @@
-from .protocol_response import ProtocolResponse
-from .protocol_request import ProtocolRequest
-from .socks import Socks
+from soxyproxy.socks.request_message import RequestMessage
+from soxyproxy.socks.response_message import ResponseMessage
+from soxyproxy.socks.socks import Socks
 
-__all__ = ['Socks', 'ProtocolRequest', 'ProtocolResponse']
+__all__ = ['Socks', 'RequestMessage', 'ResponseMessage']

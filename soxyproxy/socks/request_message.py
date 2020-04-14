@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
 
-class ProtocolResponse(ABC):
+class RequestMessage(ABC):
 
-    @property
+    @staticmethod
     @abstractmethod
-    def as_bytes(self):
+    def from_bytes(raw: bytes):
         raise NotImplementedError

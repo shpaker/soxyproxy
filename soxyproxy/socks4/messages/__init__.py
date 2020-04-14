@@ -1,4 +1,5 @@
-from .conection.connection_request import ConnectionRequest
-from .conection.connection_response import ConnectionResponse
+from soxyproxy.socks4.messages.connection_request_message import Socks4ConnectionRequestMessage
+from soxyproxy.socks4.messages.connection_response_message import Socks4ConnectionResponseMessage
 
-__all__ = ['ConnectionRequest', 'ConnectionResponse']
+__all__ = ['Socks4ConnectionRequestMessage', 'Socks4ConnectionResponseMessage']
+

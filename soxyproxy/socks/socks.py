@@ -5,8 +5,8 @@ from dataclasses import asdict
 from logging import getLogger
 from typing import Optional
 
-from ..socks import ProtocolRequest
-from ..socks_versions import SocksVersions
+from soxyproxy.protocols import Protocols
+from soxyproxy.socks import RequestMessage
 
 READ_BYTES_DEFAULT = 1024
 
@@ -15,7 +15,7 @@ logger = getLogger(__name__)
 
 class Socks(ABC):
 
-    def __init__(self, version: SocksVersions):
+    def __init__(self, version: Protocols):
         self.version = version
 
     async def server_connection_callback(self, client_reader: StreamReader, client_writer: StreamWriter) -> None:
@@ -107,6 +107,6 @@ class Socks(ABC):
 
     def _log_message(self, writer, message, is_debug=False):
         host, port = writer.get_extra_info('peername')
-        arrow = '->' if isinstance(message, ProtocolRequest) else '<-'
+        arrow = '->' if isinstance(message, RequestMessage) else '<-'
         output = f'{host}:{port} {arrow} {asdict(message)}'
         logger.debug(output) if is_debug else logger.info(output)

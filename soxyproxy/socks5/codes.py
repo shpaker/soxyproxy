@@ -1,14 +1,10 @@
 from enum import unique, Enum
 
-RESERVED_VALUE = 0
-USERNAME_AUTH_VERSION = 1
-ADDRESS_PORT_BYTES_LENGTH = 2
-ADDRESS_PORT_BYTE_ORDER = 'big'
-ADDRESS_OCTET_LENGTH = 8
+__all__ = ['Socks5AuthMethods', 'Socks5AuthReplies', 'Socks5Commands', 'Socks5AddressTypes', 'Socks5ConnectionReplies']
 
 
 @unique
-class AuthMethods(Enum):
+class Socks5AuthMethods(Enum):
     NO_AUTHENTICATION = 0
     GSSAPI = 1
     USERNAME = 2
@@ -16,27 +12,27 @@ class AuthMethods(Enum):
 
 
 @unique
-class AuthStatus(Enum):
+class Socks5AuthReplies(Enum):
     SUCCESS = 0
     FAIL = 1
 
 
 @unique
-class ConnectionTypes(Enum):
+class Socks5Commands(Enum):
     CONNECT = 1
     BIND = 2
     UDP = 3
 
 
 @unique
-class AddressTypes(Enum):
+class Socks5AddressTypes(Enum):
     IPv4 = 1
     DOMAIN = 3
     IPv6 = 4
 
 
 @unique
-class ReplyCodes(Enum):
+class Socks5ConnectionReplies(Enum):
     SUCCEEDED = 0
     GENERAL_SOCKS_SERVER_FAILURE = 1
     CONNECTION_NOT_ALLOWED_BY_RULESET = 2

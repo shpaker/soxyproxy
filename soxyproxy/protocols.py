@@ -1,7 +1,6 @@
 from enum import Enum
 
 
-class SocksVersions(Enum):
+class Protocols(Enum):
     SOCKS4 = 4
-    SOCKS4a = 4
     SOCKS5 = 5

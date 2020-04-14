@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from soxyproxy.socks import ProtocolRequest
-from soxyproxy.socks5.codes import USERNAME_AUTH_VERSION
+from soxyproxy.socks import RequestMessage
+from soxyproxy.socks5.messages.const import SOCKS5_USERNAME_AUTH_VERSION
 
 USERNAME_AUTH_VERSION_INDEX = 0
 USERNAME_LEN_INDEX = 1
@@ -9,7 +9,7 @@ USERNAME_INDEX = 2
 
 
 @dataclass
-class UsernameAuthRequest(ProtocolRequest):
+class Socks5UsernameAuthRequestMessage(RequestMessage):
     username: str
     password: str
 
@@ -21,7 +21,7 @@ class UsernameAuthRequest(ProtocolRequest):
         except (ValueError, IndexError):
             raise ValueError(f'incorrect authorization package: {raw}')
 
-        if socks_version != USERNAME_AUTH_VERSION:
+        if socks_version != SOCKS5_USERNAME_AUTH_VERSION:
             raise ValueError(f'incorrect authorization package: {raw}')
 
         username_len: int = raw[USERNAME_LEN_INDEX]
@@ -32,4 +32,4 @@ class UsernameAuthRequest(ProtocolRequest):
         password_slice = slice(USERNAME_INDEX + 1 + username_len, USERNAME_INDEX + 1 + username_len + password_len)
         password: bytes = raw[password_slice]
 
-        return UsernameAuthRequest(username=username.decode(), password=password.decode())
+        return Socks5UsernameAuthRequestMessage(username=username.decode(), password=password.decode())

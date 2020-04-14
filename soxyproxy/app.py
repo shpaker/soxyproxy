@@ -4,7 +4,7 @@ from typing import Optional, Coroutine
 
 from typer import Option, Typer, echo, BadParameter
 
-from soxyproxy import Socks, Socks5, Socks4
+from soxyproxy import Socks, Socks4, Socks5
 
 app = Typer()
 logging.basicConfig(format='[%(asctime)s] %(levelname)-8s %(message)s', level=logging.DEBUG)

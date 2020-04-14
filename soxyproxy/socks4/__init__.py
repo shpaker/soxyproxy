@@ -1,5 +1,7 @@
-from .codes import ConnectionTypes, ReplyCodes
-from .messages import ConnectionRequest, ConnectionResponse
+from .codes import *
+from .messages import *
 from .socks4 import Socks4
 
-__all__ = ['Socks4', 'ConnectionRequest', 'ConnectionResponse', 'ConnectionTypes', 'ReplyCodes']
+__all__ = [
+    'Socks4', 'Socks4ConnectionRequestMessage', 'Socks4ConnectionResponseMessage', 'Socks4Commands', 'Socks4Replies'
+]
