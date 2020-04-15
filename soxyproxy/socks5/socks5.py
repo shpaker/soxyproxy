@@ -19,6 +19,9 @@ class Socks5(Socks):
 
         super().__init__(version=Protocols.SOCKS5)
 
+        if username and not password or not username and password:
+            raise KeyError
+
         self.username = username
         self.password = password
         self.auth_method = Socks5AuthMethods.USERNAME if username else Socks5AuthMethods.NO_AUTHENTICATION
