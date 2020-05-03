@@ -17,6 +17,7 @@ class Socks(ABC):
 
     def __init__(self, version: Protocols):
         self.version = version
+        logger.info(f'Serve {self.version.name}')
 
     async def server_connection_callback(self, client_reader: StreamReader, client_writer: StreamWriter) -> None:
 

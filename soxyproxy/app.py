@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from enum import Enum, unique, auto
 from typing import Optional
 
 from environs import Env
@@ -8,12 +9,21 @@ from typer import Option, Typer, echo, BadParameter
 from soxyproxy import Socks4, Socks5
 from soxyproxy.protocols import Protocols
 
-logging.basicConfig(format='[%(asctime)s] %(levelname)-8s %(message)s', level=logging.DEBUG)
-
-app = Typer()
-
 DEFAULT_HOST = '0.0.0.0'
 DEFAULT_PORT = 1080
+LOG_FORMAT = '[%(asctime)s] %(levelname)-8s %(message)s'
+
+logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG)
+app = Typer()
+
+
+@unique
+class EnvConfigVars(Enum):
+    PROXY_PROTOCOL = auto()
+    PROXY_HOST = auto()
+    PROXY_PORT = auto()
+    PROXY_USER = auto()
+    PROXY_PASSWORD = auto()
 
 
 @app.command()
@@ -37,20 +47,18 @@ def socks5(host: str = Option(DEFAULT_HOST),
 
 def main():
     env = Env()
-    env_proxy_protocol: str = env.str('PROXY_PROTOCOL', None)
+    env_proxy_protocol: Optional[str] = env.str(EnvConfigVars.PROXY_PROTOCOL.name, None)
 
     if env_proxy_protocol is None:
         app()
         return
 
-    echo('Configuration with environment variables')
-
     protocol = Protocols[env_proxy_protocol.upper()]
 
-    host = env.str('PROXY_HOST', DEFAULT_HOST)
-    port = env.int('PROXY_PORT', DEFAULT_PORT)
-    user = env.str('PROXY_USER', None)
-    password = env.str('PROXY_PASSWORD', None)
+    host = env.str(EnvConfigVars.PROXY_HOST.name, DEFAULT_HOST)
+    port = env.int(EnvConfigVars.PROXY_PORT.name, DEFAULT_PORT)
+    user = env.str(EnvConfigVars.PROXY_USER.name, None)
+    password = env.str(EnvConfigVars.PROXY_PASSWORD.name, None)
 
     proxy = Socks4() if protocol is Protocols.SOCKS4 else Socks5(user, password)
     asyncio.run(proxy.run(host, port))

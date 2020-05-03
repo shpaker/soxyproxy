@@ -1,1 +1,2 @@
+typer==0.1.1
 environs==7.3.1
