@@ -1,0 +1,7 @@
+docker
+flake8
+mypy
+pre-commit==2.13.0
+pylint
+pytest
+requests[socks]

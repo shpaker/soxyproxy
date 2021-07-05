@@ -1,4 +1,4 @@
-from soxyproxy.app import main
+from soxyproxy.app import app
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    app()
