@@ -4,7 +4,7 @@ from typing import Union
 
 from typer import Option, Typer  # pylint: disable=wrong-import-order
 
-from soxyproxy.socks4 import Socks4
+from soxyproxy.servers.socks4 import Socks4
 
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 1080

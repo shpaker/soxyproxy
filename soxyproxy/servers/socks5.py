@@ -20,7 +20,7 @@ from soxyproxy.models.socks5.username_auth_request_message import (
 from soxyproxy.models.socks5.username_auth_response_message import (
     Socks5UsernameAuthResponseMessage,
 )
-from soxyproxy.server import ServerBase
+from soxyproxy.servers.server import ServerBase
 
 logger = getLogger(__name__)
 
