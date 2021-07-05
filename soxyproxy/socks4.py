@@ -16,9 +16,9 @@ class Socks4(ServerBase):
         client_writer: StreamWriter,
     ) -> Optional[Tuple[StreamReader, StreamWriter]]:
         request_raw = await client_reader.read(512)
+        host, port = client_writer.get_extra_info("peername")
         try:
             request = connection_request.RequestModel.loads(request_raw)
-            host, port = client_writer.get_extra_info("peername")
             logger.debug(f"{host}:{port} -> {request.json()}")
             remote_reader, remote_writer = await open_connection(
                 host=str(request.address),

@@ -19,7 +19,7 @@ USER_ID_SLICE = slice(8, -1)
 NULL_TERMINATING_CHAR_INDEX = -1
 
 
-def extract_protocol(raw: bytes) -> int:
+def extract_socks_version(raw: bytes) -> int:
     return raw[SOCKS_VERSION_INDEX]
 
 
@@ -50,9 +50,8 @@ def check_null_terminating_char(raw: bytes) -> None:
 def message_loads(raw: bytes) -> Dict[str, Any]:
     check_raw_length(raw)
     check_null_terminating_char(raw)
-    socks_version = extract_protocol(raw)
     return dict(
-        protocol=socks_version,
+        socks_version=extract_socks_version(raw),
         command=extract_command(raw),
         address=extract_address(raw),
         port=extract_port(raw),
@@ -60,17 +59,17 @@ def message_loads(raw: bytes) -> Dict[str, Any]:
 
 
 class RequestModel(RequestBaseModel):
-    protocol: SocksVersion
+    socks_version: SocksVersion
     command: Socks4Command
     port: int
     address: IPv4Address
 
-    @validator("protocol")
-    def protocol_validator(  # pylint: disable=no-self-argument, no-self-use
+    @validator("socks_version")
+    def socks_version_validator(  # pylint: disable=no-self-argument, no-self-use
         cls,
         value: int,
     ):
-        if value != 4:
+        if value != SocksVersion.SOCKS4:
             raise ValueError(f"incorrect protocol version: {value}")
         return value
 

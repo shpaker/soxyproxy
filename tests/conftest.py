@@ -1,10 +1,12 @@
 from asyncio import gather
+from asyncio import open_connection
 from logging import getLogger, basicConfig
 from typing import Dict
 
 from pytest import fixture, mark
 
 from soxyproxy.socks4 import Socks4
+from soxyproxy.socks5 import Socks5
 
 logger = getLogger(__name__)
 basicConfig(level="DEBUG")
@@ -63,10 +65,36 @@ def socks4_proxies() -> Dict[str, str]:
 
 @mark.asyncio
 @fixture()
-async def run_server():
+async def run_socks4_server():
     proxy = Socks4()
     pending = gather(
         proxy.run(host="0.0.0.0", port=TEST_SERVER_PORT),
     )
     yield
     pending.cancel()
+
+
+@mark.asyncio
+@fixture()
+async def run_socks5_server():
+    proxy = Socks5()
+    pending = gather(
+        proxy.run(host="0.0.0.0", port=TEST_SERVER_PORT),
+    )
+    yield
+    pending.cancel()
+
+
+@fixture()
+def send_data():
+
+    async def func(data: bytes) -> bytes:
+        reader, writer = await open_connection('127.0.0.1', 8888)
+        writer.write(data)
+        await writer.drain()
+        data = await reader.read(100)
+        writer.close()
+        await writer.wait_closed()
+        return data
+
+    return func
