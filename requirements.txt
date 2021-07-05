@@ -1,1 +1,2 @@
+pydantic
 typer==0.1.1

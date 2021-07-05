@@ -1,37 +1,32 @@
 import asyncio
 from abc import ABC, abstractmethod
 from asyncio import FIRST_COMPLETED, StreamReader, StreamWriter, Task, create_task
-from dataclasses import asdict
 from logging import getLogger
-from typing import Optional
-
-from soxyproxy.server import RequestMessage
+from typing import Optional, Tuple
 
 READ_BYTES_DEFAULT = 1024
 logger = getLogger(__name__)
 
 
-class Server(ABC):
+class ServerBase(ABC):
     async def server_connection_callback(
         self,
         client_reader: StreamReader,
         client_writer: StreamWriter,
     ) -> None:
-
         host, port = client_writer.get_extra_info("peername")
-
         try:
             await self.serve_client(
-                client_reader=client_reader, client_writer=client_writer
+                client_reader=client_reader,
+                client_writer=client_writer,
             )
         except ValueError as err:
-            logger.warning(f"{host}:{port} package error: {err}")
+            logger.warning(f"{host}:{port} ! package error: {err}")
         except ConnectionError as err:
-            logger.warning(f"{host}:{port} connection error: {err}")
+            logger.warning(f"{host}:{port} ! connection error: {err}")
         finally:
             if not client_writer.is_closing():
                 await client_writer.drain()
-
             client_writer.close()
             logger.info(f"{host}:{port} close session")
 
@@ -40,6 +35,7 @@ class Server(ABC):
         host: str,
         port: int,
     ) -> None:
+        logger.info(f"Start {self.__class__.__name__.lower()} server {host}:{port}")
         server = await asyncio.start_server(
             client_connected_cb=self.server_connection_callback, host=host, port=port
         )
@@ -51,7 +47,7 @@ class Server(ABC):
         self,
         client_reader: StreamReader,
         client_writer: StreamWriter,
-    ) -> (StreamReader, StreamWriter):
+    ) -> Tuple[StreamReader, StreamWriter]:
         raise NotImplementedError
 
     async def serve_client(
@@ -60,22 +56,21 @@ class Server(ABC):
         client_writer: StreamWriter,
     ) -> None:
         client_host, client_port = client_writer.get_extra_info("peername")
-        try:
-            remote_reader, remote_writer = await self.connect(
-                client_reader=client_reader, client_writer=client_writer
-            )
-            remote_host, remote_port = remote_writer.get_extra_info("peername")
-            logger.info(
-                f"{client_host}:{client_port} <-> {remote_host}:{remote_port} session"
-            )
-            await self.proxy(
-                client_reader=client_reader,
-                client_writer=client_writer,
-                remote_reader=remote_reader,
-                remote_writer=remote_writer,
-            )
-        except ConnectionResetError as err:
-            logger.error(err)
+
+        remote_reader, remote_writer = await self.connect(
+            client_reader=client_reader,
+            client_writer=client_writer,
+        )
+        remote_host, remote_port = remote_writer.get_extra_info("peername")
+        logger.info(
+            f"{client_host}:{client_port} <-> {remote_host}:{remote_port} session"
+        )
+        await self.proxy(
+            client_reader=client_reader,
+            client_writer=client_writer,
+            remote_reader=remote_reader,
+            remote_writer=remote_writer,
+        )
 
     async def proxy(
         self,
@@ -133,14 +128,3 @@ class Server(ABC):
         out_writer.write(data)
         await out_writer.drain()
         return asyncio.create_task(in_reader.read(512))
-
-    def _log_message(  # pylint: disable=no-self-use
-        self,
-        writer,
-        message,
-        is_debug=False,  # noqa, pylint: disable=unused-argument
-    ) -> None:
-        host, port = writer.get_extra_info("peername")
-        arrow = "->" if isinstance(message, RequestMessage) else "<-"
-        output = f"{host}:{port} {arrow} {asdict(message)}"
-        logger.info(output)
