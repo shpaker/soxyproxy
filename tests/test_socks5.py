@@ -21,6 +21,30 @@ async def test_correct_request(
 
 
 @mark.asyncio
+async def test_correct_auth_request(
+    run_socks5_auth_server,  # noqa
+) -> None:
+    transport = AsyncProxyTransport.from_url('socks5://test:qwerty@127.0.0.1:8888')
+    async with AsyncClient(transport=transport) as client:
+        res: Response = await client.get("https://httpbin.org/get")
+        res.raise_for_status()
+
+
+@mark.asyncio
+async def test_incorrect_auth_request(
+    run_socks5_auth_server,  # noqa
+) -> None:
+    transport = AsyncProxyTransport.from_url('socks5://test:123456@127.0.0.1:8888')
+    async with AsyncClient(transport=transport) as client:
+        try:
+            res: Response = await client.get("https://httpbin.org/get")
+            res.raise_for_status()
+        except ProxyError as err:
+            pass
+            # assert err.error_code == Socks5ConnectionReplies.HOST_UNREACHABLE
+
+
+@mark.asyncio
 async def test_incorrect_request(
     run_socks5_server,  # noqa
 ) -> None:

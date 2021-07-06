@@ -22,15 +22,6 @@ def extract_auth_methods(raw: bytes) -> List[Socks5AuthMethod]:
     return [Socks5AuthMethod(raw_method) for raw_method in list(raw[AUTH_METHOD_SLICE])]
 
 
-def message_loads(raw: bytes) -> Dict[str, Any]:
-    # check_raw_length(raw)
-    return dict(
-        socks_version=extract_socks_version(raw),
-        auth_methods_count=extract_auth_methods_count(raw),
-        auth_methods=extract_auth_methods(raw),
-    )
-
-
 class RequestModel(RequestBaseModel):
     socks_version: SocksVersion
     auth_methods_count: int
@@ -50,7 +41,7 @@ class RequestModel(RequestBaseModel):
         cls,  # pylint: disable=unused-argument
         value: List[Socks5AuthMethod],
         values: Dict[str, Any],
-        **kwargs,
+        **kwargs,  # noqa
     ):
         auth_methods_count = values["auth_methods_count"]
         if len(value) != auth_methods_count:
@@ -62,5 +53,8 @@ class RequestModel(RequestBaseModel):
         cls,
         raw: bytes,
     ) -> "RequestModel":
-        data = message_loads(raw)
-        return cls(**data)
+        return cls(
+            socks_version=extract_socks_version(raw),
+            auth_methods_count=extract_auth_methods_count(raw),
+            auth_methods=extract_auth_methods(raw),
+        )

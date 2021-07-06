@@ -8,9 +8,7 @@ from soxyproxy.models.socks5 import (
     handshake_request,
     handshake_response,
 )
-from soxyproxy.models.socks5.connection_request_message import (
-    Socks5ConnectionRequestMessage,
-)
+from soxyproxy.models.socks5 import connection_request
 from soxyproxy.models.socks5.connection_response_message import (
     Socks5ConnectionResponseMessage,
 )
@@ -103,7 +101,7 @@ class Socks5(ServerBase):
         response: Optional[Socks5ConnectionResponseMessage] = None
 
         try:
-            request = Socks5ConnectionRequestMessage.from_bytes(request_raw)
+            request = connection_request.RequestModel.loads(request_raw)
 
             logger.debug(f"{host}:{port} -> {request}")
             remote_reader, remote_writer = await open_connection(
@@ -119,18 +117,14 @@ class Socks5(ServerBase):
         except socket.gaierror:
             response = Socks5ConnectionResponseMessage(
                 reply=Socks5ConnectionReplies.HOST_UNREACHABLE,
-                address=Socks5ConnectionRequestMessage.get_domain_name_from_raw(
-                    request_raw
-                ),
-                port=Socks5ConnectionRequestMessage.get_port_from_raw(request_raw),
+                address=connection_request.extract_domain_name(request_raw),
+                port=connection_request.extract_port(request_raw),
             )
         except (OSError, TimeoutError):
             response = Socks5ConnectionResponseMessage(
                 reply=Socks5ConnectionReplies.HOST_UNREACHABLE,
-                address=Socks5ConnectionRequestMessage.get_address_from_raw(
-                    request_raw
-                ),
-                port=Socks5ConnectionRequestMessage.get_port_from_raw(request_raw),
+                address=connection_request.extract_address(request_raw),
+                port=connection_request.extract_port(request_raw),
             )
         finally:
             if response:

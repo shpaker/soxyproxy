@@ -1,5 +1,4 @@
 from ipaddress import IPv4Address
-from typing import Any, Dict
 
 from pydantic import validator
 
@@ -47,17 +46,6 @@ def check_null_terminating_char(raw: bytes) -> None:
         raise ValueError(f"package should be null-terminated: {raw}")
 
 
-def message_loads(raw: bytes) -> Dict[str, Any]:
-    check_raw_length(raw)
-    check_null_terminating_char(raw)
-    return dict(
-        socks_version=extract_socks_version(raw),
-        command=extract_command(raw),
-        address=extract_address(raw),
-        port=extract_port(raw),
-    )
-
-
 class RequestModel(RequestBaseModel):
     socks_version: SocksVersion
     command: Socks4Command
@@ -78,5 +66,11 @@ class RequestModel(RequestBaseModel):
         cls,
         raw: bytes,
     ) -> "RequestModel":
-        data = message_loads(raw)
-        return cls(**data)
+        check_raw_length(raw)
+        check_null_terminating_char(raw)
+        return cls(
+            socks_version=extract_socks_version(raw),
+            command=extract_command(raw),
+            address=extract_address(raw),
+            port=extract_port(raw),
+        )

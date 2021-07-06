@@ -68,7 +68,10 @@ def socks4_proxies() -> Dict[str, str]:
 async def run_socks4_server():
     proxy = Socks4()
     pending = gather(
-        proxy.run(host="0.0.0.0", port=TEST_SERVER_PORT),
+        proxy.run(
+            host="0.0.0.0",
+            port=TEST_SERVER_PORT,
+        ),
     )
     yield
     pending.cancel()
@@ -79,7 +82,27 @@ async def run_socks4_server():
 async def run_socks5_server():
     proxy = Socks5()
     pending = gather(
-        proxy.run(host="0.0.0.0", port=TEST_SERVER_PORT),
+        proxy.run(
+            host="0.0.0.0",
+            port=TEST_SERVER_PORT,
+        ),
+    )
+    yield
+    pending.cancel()
+
+
+@mark.asyncio
+@fixture()
+async def run_socks5_auth_server():
+    proxy = Socks5(
+        username="test",
+        password="qwerty"
+    )
+    pending = gather(
+        proxy.run(
+            host="0.0.0.0",
+            port=TEST_SERVER_PORT,
+        ),
     )
     yield
     pending.cancel()
