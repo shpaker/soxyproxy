@@ -4,15 +4,15 @@ from pydantic import validator
 
 from soxyproxy.consts import (
     Socks4Reply,
-    SOCKS4_ADDRESS_PORT_BYTES_LENGTH,
-    SOCKS4_ADDRESS_PORT_BYTES_ORDER,
+    PORT_BYTES_LENGTH,
+    PORT_BYTES_ORDER,
 )
 from soxyproxy.consts import SocksVersion, Socks4Command
 from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
 
 SOCKS_VERSION_INDEX = 0
 COMMAND_INDEX = 1
-DESTINATION_PORT_SLICE = slice(2, 2 + SOCKS4_ADDRESS_PORT_BYTES_LENGTH)
+DESTINATION_PORT_SLICE = slice(2, 2 + PORT_BYTES_LENGTH)
 DESTINATION_ADDRESS_SLICE = slice(4, 8)
 USER_ID_SLICE = slice(8, -1)
 NULL_TERMINATING_CHAR_INDEX = -1
@@ -28,7 +28,7 @@ def extract_command(raw: bytes) -> int:
 
 def extract_port(raw: bytes) -> int:
     raw_port = raw[DESTINATION_PORT_SLICE]
-    return int.from_bytes(raw_port, byteorder=SOCKS4_ADDRESS_PORT_BYTES_ORDER)
+    return int.from_bytes(raw_port, byteorder=PORT_BYTES_ORDER)
 
 
 def extract_address(raw: bytes) -> bytes:
@@ -85,8 +85,8 @@ class ResponseModel(ResponseBaseModel):
     def dumps(self) -> bytes:
         port_bytes = int.to_bytes(
             self.port,
-            SOCKS4_ADDRESS_PORT_BYTES_LENGTH,
-            SOCKS4_ADDRESS_PORT_BYTES_ORDER,
+            PORT_BYTES_LENGTH,
+            PORT_BYTES_ORDER,
         )
         return (
             bytes([self.reply_version, self.reply.value])

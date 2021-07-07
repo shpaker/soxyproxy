@@ -1,13 +1,7 @@
 from enum import unique, IntEnum
 
-SOCKS4_ADDRESS_PORT_BYTES_LENGTH = 2
-SOCKS4_ADDRESS_PORT_BYTES_ORDER = "big"
-
-SOCKS5_ADDRESS_PORT_BYTES_LENGTH = 2
-SOCKS5_ADDRESS_PORT_BYTE_ORDER = "big"
-SOCKS5_PACKAGE_RESERVED_VALUE = 0
-SOCKS5_USERNAME_AUTH_VERSION = 1
-SOCKS5_ADDRESS_OCTET_LENGTH = 8
+PORT_BYTES_LENGTH = 2
+PORT_BYTES_ORDER = "big"
 
 
 @unique
@@ -41,27 +35,27 @@ class Socks5AuthMethod(IntEnum):
 
 
 @unique
-class Socks5AuthReplies(IntEnum):
+class Socks5AuthReply(IntEnum):
     SUCCESS = 0
     FAIL = 1
 
 
 @unique
-class Socks5Commands(IntEnum):
+class Socks5Command(IntEnum):
     CONNECT = 1
     BIND = 2
     UDP = 3
 
 
 @unique
-class Socks5AddressTypes(IntEnum):
+class Socks5AddressType(IntEnum):
     IPV4 = 1
     DOMAIN = 3
     IPV6 = 4
 
 
 @unique
-class Socks5ConnectionReplies(IntEnum):
+class Socks5ConnectionReply(IntEnum):
     SUCCEEDED = 0
     GENERAL_SOCKS_SERVER_FAILURE = 1
     CONNECTION_NOT_ALLOWED_BY_RULESET = 2

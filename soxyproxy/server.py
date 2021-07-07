@@ -122,11 +122,11 @@ class ServerBase(ABC):
 
     async def _proxy_connection(
         self,
-        in_read: Task[bytes],
-        out_read: Task[bytes],
+        in_read: Task,  # type: ignore
+        out_read: Task,  # type: ignore
         in_reader: StreamReader,
         out_writer: StreamWriter,
-    ) -> Optional[Task[bytes]]:
+    ) -> Optional[Task]:  # type: ignore
         data: bytes = in_read.result()
         if not data:
             out_read.cancel()

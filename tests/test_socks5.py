@@ -4,7 +4,7 @@ from httpx import AsyncClient, Response
 from httpx_socks import AsyncProxyTransport, ProxyError
 from pytest import mark
 
-from soxyproxy.consts import Socks5ConnectionReplies
+from soxyproxy.consts import Socks5ConnectionReply
 
 logger = getLogger(__name__)
 basicConfig(level="DEBUG")
@@ -54,4 +54,4 @@ async def test_incorrect_request(
             res: Response = await client.get("https://127.0.0.1:9449/get")
             res.raise_for_status()
         except ProxyError as err:
-            assert err.error_code == Socks5ConnectionReplies.HOST_UNREACHABLE
+            assert err.error_code == Socks5ConnectionReply.HOST_UNREACHABLE

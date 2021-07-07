@@ -3,9 +3,9 @@ from asyncio import StreamReader, StreamWriter, open_connection
 from logging import getLogger
 from typing import Optional, Tuple
 
-from soxyproxy.consts import Socks5AuthMethod, Socks5ConnectionReplies
+from soxyproxy.consts import Socks5AuthMethod, Socks5ConnectionReply
 from soxyproxy.models.socks5 import handshake, connection, username_auth
-from soxyproxy.servers.server import ServerBase
+from soxyproxy.server import ServerBase
 
 logger = getLogger(__name__)
 
@@ -98,20 +98,20 @@ class Socks5(ServerBase):
                 port=request.port,
             )
             response = connection.ResponseModel(
-                reply=Socks5ConnectionReplies.SUCCEEDED,
+                reply=Socks5ConnectionReply.SUCCEEDED,
                 address=request.address,
                 port=request.port,
             )
             return remote_reader, remote_writer
         except socket.gaierror:
             response = connection.ResponseModel(
-                reply=Socks5ConnectionReplies.HOST_UNREACHABLE,
+                reply=Socks5ConnectionReply.HOST_UNREACHABLE,
                 address=connection.extract_domain_name(request_raw),
                 port=connection.extract_port(request_raw),
             )
         except (OSError, TimeoutError):
             response = connection.ResponseModel(
-                reply=Socks5ConnectionReplies.HOST_UNREACHABLE,
+                reply=Socks5ConnectionReply.HOST_UNREACHABLE,
                 address=connection.extract_address(request_raw),
                 port=connection.extract_port(request_raw),
             )
@@ -120,7 +120,7 @@ class Socks5(ServerBase):
                 logger.debug(f"{host}:{port} -> {response}")
                 client_writer.write(response.dumps())
 
-            if response and response.reply is not Socks5ConnectionReplies.SUCCEEDED:
+            if response and response.reply is not Socks5ConnectionReply.SUCCEEDED:
                 raise ConnectionError(response.reply.name)
 
     async def serve_client(

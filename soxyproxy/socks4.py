@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 
 from soxyproxy.consts import Socks4Reply
 from soxyproxy.models.socks4 import connection
-from soxyproxy.servers.server import ServerBase
+from soxyproxy.server import ServerBase
 
 logger = logging.getLogger(__name__)
 

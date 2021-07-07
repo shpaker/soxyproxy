@@ -1,11 +1,12 @@
 from pydantic import validator
 
-from soxyproxy.consts import SOCKS5_USERNAME_AUTH_VERSION, Socks5AuthReplies
+from soxyproxy.consts import Socks5AuthReply
 from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
 
 USERNAME_AUTH_VERSION_INDEX = 0
 USERNAME_LEN_INDEX = 1
 USERNAME_INDEX = 2
+SOCKS5_USERNAME_AUTH_VERSION = 1
 
 
 def extract_username_auth_version(raw: bytes) -> int:
@@ -64,7 +65,7 @@ class ResponseModel(ResponseBaseModel):
     status: bool
 
     def dumps(self) -> bytes:
-        auth_status: Socks5AuthReplies = (
-            Socks5AuthReplies.SUCCESS if self.status else Socks5AuthReplies.FAIL
+        auth_status: Socks5AuthReply = (
+            Socks5AuthReply.SUCCESS if self.status else Socks5AuthReply.FAIL
         )
         return bytes([SOCKS5_USERNAME_AUTH_VERSION, auth_status.value])

@@ -6,15 +6,15 @@ from typing import Union
 from pydantic import validator
 
 from soxyproxy.consts import (
-    SOCKS5_ADDRESS_PORT_BYTES_LENGTH,
-    SOCKS5_ADDRESS_OCTET_LENGTH,
-    SOCKS5_PACKAGE_RESERVED_VALUE,
-    SOCKS5_ADDRESS_PORT_BYTE_ORDER,
-    Socks5ConnectionReplies,
+    Socks5ConnectionReply,
+    PORT_BYTES_LENGTH,
+    PORT_BYTES_ORDER,
 )
-from soxyproxy.consts import Socks5Commands, SocksVersion, Socks5AddressTypes
+from soxyproxy.consts import Socks5Command, SocksVersion, Socks5AddressType
 from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
 
+SOCKS5_PACKAGE_RESERVED_VALUE = 0
+SOCKS5_ADDRESS_OCTET_LENGTH = 8
 SOCKS_VERSION_INDEX = 0
 CONNECTION_COMMAND_INDEX = 1
 RESERVED_VALUE_INDEX = 2
@@ -23,7 +23,7 @@ IPV4_DESTINATION_ADDRESS_SLICE = slice(4, 4 + IPV4LENGTH // SOCKS5_ADDRESS_OCTET
 IPV6_DESTINATION_ADDRESS_SLICE = slice(4, 4 + IPV6LENGTH // SOCKS5_ADDRESS_OCTET_LENGTH)
 DOMAIN_LEN_INDEX = 4
 DOMAIN_NAME_INDEX = 5
-DESTINATION_PORT_SLICE = slice(-SOCKS5_ADDRESS_PORT_BYTES_LENGTH, None)
+DESTINATION_PORT_SLICE = slice(-PORT_BYTES_LENGTH, None)
 
 logger = getLogger()
 
@@ -51,18 +51,18 @@ def extract_domain_name(raw: bytes) -> str:
 def extract_port(raw: bytes) -> int:
     return int.from_bytes(
         bytes=raw[DESTINATION_PORT_SLICE],
-        byteorder=SOCKS5_ADDRESS_PORT_BYTE_ORDER,
+        byteorder=PORT_BYTES_ORDER,
     )
 
 
 def extract_address(raw: bytes) -> Union[IPv4Address, IPv6Address]:
-    address_type = Socks5AddressTypes(raw[ADDRESS_TYPE_INDEX])
+    address_type = Socks5AddressType(raw[ADDRESS_TYPE_INDEX])
 
-    if address_type == Socks5AddressTypes.IPV6:
+    if address_type == Socks5AddressType.IPV6:
         raw_address = raw[IPV6_DESTINATION_ADDRESS_SLICE]
         return IPv6Address(raw_address)
 
-    if address_type == Socks5AddressTypes.DOMAIN:
+    if address_type == Socks5AddressType.DOMAIN:
         domain_name = extract_domain_name(raw)
         address = gethostbyname(domain_name)
         return IPv4Address(address)
@@ -73,7 +73,7 @@ def extract_address(raw: bytes) -> Union[IPv4Address, IPv6Address]:
 
 class RequestModel(RequestBaseModel):
     socks_version: SocksVersion
-    action: Socks5Commands
+    action: Socks5Command
     address: Union[IPv4Address, IPv6Address]
     port: int
     reserved_value: int = 0
@@ -111,7 +111,7 @@ class RequestModel(RequestBaseModel):
 
 
 class ResponseModel(ResponseBaseModel):
-    reply: Socks5ConnectionReplies
+    reply: Socks5ConnectionReply
     address: Union[IPv4Address, IPv6Address, str]
     port: int
 
@@ -124,14 +124,12 @@ class ResponseModel(ResponseBaseModel):
             ]
         )
         if isinstance(self.address, IPv4Address):
-            response += bytes([Socks5AddressTypes.IPV4.value]) + self.address.packed
+            response += bytes([Socks5AddressType.IPV4.value]) + self.address.packed
         if isinstance(self.address, IPv6Address):
-            response += bytes([Socks5AddressTypes.IPV6.value]) + self.address.packed
+            response += bytes([Socks5AddressType.IPV6.value]) + self.address.packed
         if isinstance(self.address, str):
-            address_types = Socks5AddressTypes.DOMAIN
+            address_types = Socks5AddressType.DOMAIN
             response += (
                 bytes([address_types.value, len(self.address)]) + self.address.encode()
             )
-        return response + int.to_bytes(
-            self.port, SOCKS5_ADDRESS_PORT_BYTES_LENGTH, SOCKS5_ADDRESS_PORT_BYTE_ORDER
-        )
+        return response + int.to_bytes(self.port, PORT_BYTES_LENGTH, PORT_BYTES_ORDER)
