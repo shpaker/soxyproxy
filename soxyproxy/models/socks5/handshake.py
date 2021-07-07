@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from pydantic import Field, validator
 
 from soxyproxy.consts import SocksVersion, Socks5AuthMethod
-from soxyproxy.models.base import RequestBaseModel
+from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
 
 SOCKS_VERSION_INDEX = 0
 AUTH_METHODS_COUNT_INDEX = 1
@@ -31,7 +31,7 @@ class RequestModel(RequestBaseModel):
     def socks_version_validator(  # pylint: disable=no-self-argument, no-self-use
         cls,
         value: int,
-    ):
+    ) -> int:
         if value != SocksVersion.SOCKS5:
             raise ValueError(f"incorrect protocol version: {value}")
         return value
@@ -41,8 +41,8 @@ class RequestModel(RequestBaseModel):
         cls,  # pylint: disable=unused-argument
         value: List[Socks5AuthMethod],
         values: Dict[str, Any],
-        **kwargs,  # noqa
-    ):
+        **kwargs: Any,  # noqa
+    ) -> List[Socks5AuthMethod]:
         auth_methods_count = values["auth_methods_count"]
         if len(value) != auth_methods_count:
             raise ValueError("incorrect handshake package")
@@ -58,3 +58,11 @@ class RequestModel(RequestBaseModel):
             auth_methods_count=extract_auth_methods_count(raw),
             auth_methods=extract_auth_methods(raw),
         )
+
+
+class ResponseModel(ResponseBaseModel):
+    socks_version: SocksVersion = SocksVersion.SOCKS5
+    auth_method: Socks5AuthMethod
+
+    def dumps(self) -> bytes:
+        return bytes([self.socks_version.value, self.auth_method.value])

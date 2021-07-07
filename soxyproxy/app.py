@@ -1,10 +1,11 @@
 import asyncio
 import logging
-from typing import Union
+from typing import Union, Optional
 
-from typer import Option, Typer  # pylint: disable=wrong-import-order
+from typer import Option, Typer, BadParameter  # pylint: disable=wrong-import-order
 
 from soxyproxy.servers.socks4 import Socks4
+from soxyproxy.servers.socks5 import Socks5
 
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 1080
@@ -15,7 +16,10 @@ app = Typer()
 
 
 def start_server(
-    proxy: Union[Socks4],
+    proxy: Union[
+        Socks4,
+        Socks5,
+    ],
     host: str,
     port: int,
 ) -> None:
@@ -32,15 +36,15 @@ def socks4(
     start_server(proxy, host, port)
 
 
-# @app.command()
-# def socks5(
-#     host: str = Option(DEFAULT_HOST),
-#     port: int = Option(DEFAULT_PORT),
-#     username: Optional[str] = Option(None),
-#     password: Optional[str] = Option(None),
-# ) -> None:
-#     try:
-#         proxy = Socks5(username=username, password=password)
-#     except KeyError as err:
-#         raise BadParameter("Authentication credentials required") from err
-#     start_server(proxy, host, port)
+@app.command()
+def socks5(
+    host: str = Option(DEFAULT_HOST),
+    port: int = Option(DEFAULT_PORT),
+    username: Optional[str] = Option(None),
+    password: Optional[str] = Option(None),
+) -> None:
+    try:
+        proxy = Socks5(username=username, password=password)
+    except KeyError as err:
+        raise BadParameter("Authentication credentials required") from err
+    start_server(proxy, host, port)

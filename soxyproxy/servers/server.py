@@ -1,6 +1,13 @@
-import asyncio
 from abc import ABC, abstractmethod
-from asyncio import FIRST_COMPLETED, StreamReader, StreamWriter, Task, create_task
+from asyncio import (
+    FIRST_COMPLETED,
+    StreamReader,
+    StreamWriter,
+    Task,
+    create_task,
+    start_server,
+    wait,
+)
 from logging import getLogger
 from typing import Optional, Tuple
 
@@ -36,7 +43,7 @@ class ServerBase(ABC):
         port: int,
     ) -> None:
         logger.info(f"Start {self.__class__.__name__.lower()} server {host}:{port}")
-        server = await asyncio.start_server(
+        server = await start_server(
             client_connected_cb=self.server_connection_callback, host=host, port=port
         )
         async with server:
@@ -83,14 +90,14 @@ class ServerBase(ABC):
         client_read_task = create_task(client_reader.read(READ_BYTES_DEFAULT))
         remote_read_task = create_task(remote_reader.read(READ_BYTES_DEFAULT))
 
-        while client_read_task and remote_read_task:
+        while client_read_task is not None and remote_read_task is not None:
 
-            done, _ = await asyncio.wait(
+            done, _ = await wait(
                 {client_read_task, remote_read_task}, return_when=FIRST_COMPLETED
             )
 
             if client_read_task in done:
-                client_read_task = await self._proxy_connection(
+                client_read_task = await self._proxy_connection(  # type: ignore
                     in_read=client_read_task,
                     out_read=remote_read_task,
                     in_reader=client_reader,
@@ -98,7 +105,7 @@ class ServerBase(ABC):
                 )
 
             if remote_read_task in done:
-                remote_read_task = await self._proxy_connection(
+                remote_read_task = await self._proxy_connection(  # type: ignore
                     in_read=remote_read_task,
                     out_read=client_read_task,
                     in_reader=remote_reader,
@@ -115,16 +122,15 @@ class ServerBase(ABC):
 
     async def _proxy_connection(
         self,
-        in_read: Task,
-        out_read: Task,
+        in_read: Task[bytes],
+        out_read: Task[bytes],
         in_reader: StreamReader,
         out_writer: StreamWriter,
-    ) -> Optional[asyncio.Task]:
-
+    ) -> Optional[Task[bytes]]:
         data: bytes = in_read.result()
         if not data:
             out_read.cancel()
-            return
+            return None
         out_writer.write(data)
         await out_writer.drain()
-        return asyncio.create_task(in_reader.read(512))
+        return create_task(in_reader.read(512))

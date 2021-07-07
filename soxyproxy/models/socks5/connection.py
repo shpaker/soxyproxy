@@ -10,9 +10,10 @@ from soxyproxy.consts import (
     SOCKS5_ADDRESS_OCTET_LENGTH,
     SOCKS5_PACKAGE_RESERVED_VALUE,
     SOCKS5_ADDRESS_PORT_BYTE_ORDER,
+    Socks5ConnectionReplies,
 )
 from soxyproxy.consts import Socks5Commands, SocksVersion, Socks5AddressTypes
-from soxyproxy.models.base import RequestBaseModel
+from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
 
 SOCKS_VERSION_INDEX = 0
 CONNECTION_COMMAND_INDEX = 1
@@ -31,11 +32,11 @@ def extract_socks_version(raw: bytes) -> int:
     return raw[SOCKS_VERSION_INDEX]
 
 
-def extract_action(raw):
+def extract_action(raw: bytes) -> int:
     return raw[CONNECTION_COMMAND_INDEX]
 
 
-def extract_reserved_value(raw):
+def extract_reserved_value(raw: bytes) -> int:
     return raw[RESERVED_VALUE_INDEX]
 
 
@@ -81,7 +82,7 @@ class RequestModel(RequestBaseModel):
     def socks_version_validator(  # pylint: disable=no-self-argument, no-self-use
         cls,
         value: int,
-    ):
+    ) -> int:
         if value != SocksVersion.SOCKS5:
             raise ValueError(f"incorrect protocol version: {value}")
         return value
@@ -90,7 +91,7 @@ class RequestModel(RequestBaseModel):
     def reserved_value_validator(  # pylint: disable=no-self-argument, no-self-use
         cls,
         value: int,
-    ):
+    ) -> int:
         if value != SOCKS5_PACKAGE_RESERVED_VALUE:
             raise ValueError(f"incorrect reserved value: {value}")
         return value
@@ -106,4 +107,31 @@ class RequestModel(RequestBaseModel):
             address=extract_address(raw),
             port=extract_port(raw),
             reserved_value=extract_reserved_value(raw),
+        )
+
+
+class ResponseModel(ResponseBaseModel):
+    reply: Socks5ConnectionReplies
+    address: Union[IPv4Address, IPv6Address, str]
+    port: int
+
+    def dumps(self) -> bytes:
+        response = bytes(
+            [
+                SocksVersion.SOCKS5.value,
+                self.reply.value,
+                SOCKS5_PACKAGE_RESERVED_VALUE,
+            ]
+        )
+        if isinstance(self.address, IPv4Address):
+            response += bytes([Socks5AddressTypes.IPV4.value]) + self.address.packed
+        if isinstance(self.address, IPv6Address):
+            response += bytes([Socks5AddressTypes.IPV6.value]) + self.address.packed
+        if isinstance(self.address, str):
+            address_types = Socks5AddressTypes.DOMAIN
+            response += (
+                bytes([address_types.value, len(self.address)]) + self.address.encode()
+            )
+        return response + int.to_bytes(
+            self.port, SOCKS5_ADDRESS_PORT_BYTES_LENGTH, SOCKS5_ADDRESS_PORT_BYTE_ORDER
         )

@@ -3,12 +3,12 @@ from ipaddress import IPv4Address
 from pydantic import validator
 
 from soxyproxy.consts import (
-    SOCKS4_ADDRESS_PORT_BYTES_ORDER,
+    Socks4Reply,
     SOCKS4_ADDRESS_PORT_BYTES_LENGTH,
-    SocksVersion,
-    Socks4Command,
+    SOCKS4_ADDRESS_PORT_BYTES_ORDER,
 )
-from soxyproxy.models.base import RequestBaseModel
+from soxyproxy.consts import SocksVersion, Socks4Command
+from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
 
 SOCKS_VERSION_INDEX = 0
 COMMAND_INDEX = 1
@@ -38,12 +38,12 @@ def extract_address(raw: bytes) -> bytes:
 def check_raw_length(raw: bytes) -> None:
     data_len = len(raw)
     if data_len < 9:
-        raise ValueError(f"incorrect package size: {raw} ({data_len} bytes)")
+        raise ValueError(f"incorrect package size: {str(raw)} ({data_len} bytes)")
 
 
 def check_null_terminating_char(raw: bytes) -> None:
     if raw[NULL_TERMINATING_CHAR_INDEX] != 0x0:
-        raise ValueError(f"package should be null-terminated: {raw}")
+        raise ValueError(f"package should be null-terminated: {str(raw)}")
 
 
 class RequestModel(RequestBaseModel):
@@ -56,7 +56,7 @@ class RequestModel(RequestBaseModel):
     def socks_version_validator(  # pylint: disable=no-self-argument, no-self-use
         cls,
         value: int,
-    ):
+    ) -> int:
         if value != SocksVersion.SOCKS4:
             raise ValueError(f"incorrect protocol version: {value}")
         return value
@@ -73,4 +73,23 @@ class RequestModel(RequestBaseModel):
             command=extract_command(raw),
             address=extract_address(raw),
             port=extract_port(raw),
+        )
+
+
+class ResponseModel(ResponseBaseModel):
+    reply_version: int = 0
+    reply: Socks4Reply
+    port: int
+    address: IPv4Address
+
+    def dumps(self) -> bytes:
+        port_bytes = int.to_bytes(
+            self.port,
+            SOCKS4_ADDRESS_PORT_BYTES_LENGTH,
+            SOCKS4_ADDRESS_PORT_BYTES_ORDER,
+        )
+        return (
+            bytes([self.reply_version, self.reply.value])
+            + port_bytes
+            + self.address.packed
         )
