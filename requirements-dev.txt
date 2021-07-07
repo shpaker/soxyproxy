@@ -1,8 +1,0 @@
-docker
-flake8
-httpx
-httpx-socks[asyncio]
-mypy
-pre-commit==2.13.0
-pylint
-pytest

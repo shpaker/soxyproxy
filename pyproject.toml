@@ -37,3 +37,30 @@ good-names = "i, x, y"
 ignore = "venv,tests"
 indent-string = "    "
 extension-pkg-whitelist = "pydantic"
+
+[tool.poetry]
+name = "soxyproxy"
+version = "0.4.0"
+description = "Pure Python SOCKS proxy server implementation"
+authors = ["Aleksandr Shpak <shpaker@gmail.com>"]
+readme = "readme.md"
+homepage = "https://github.com/shpaker/soxyproxy"
+repository = "https://github.com/shpaker/soxyproxy"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+pydantic = "^1.8.2"
+typer = "^0.3.2"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^3.9.2"
+httpx = "^0.18.2"
+httpx-socks = {extras = ["asyncio"], version = "^0.4.1"}
+mypy = "^0.910"
+pre-commit = "^2.13.0"
+pylint = "^2.9.3"
+pytest = "^6.2.4"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

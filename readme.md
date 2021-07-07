@@ -1,10 +1,31 @@
-# SOCKS
+# SoxyProxy
+
+## Getting Started
+
+### Installing
+
+SoxyProxy can be installed using pip:
+
+```bash
+pip install soxyproxy
+```
+
+## Usage
+
+To test that installation was successful, try:
+
+```bash
+
+python -m soxyproxy socks5
+```
 
 ## Features
 
-* Protocols
-  * [x] SOCKS4
-  * [x] SOCKS5
+### Protocols
+
+#### SOCKS4
+
+#### SOCKS5
 
 * Protocols
   * [x] TCP
@@ -25,4 +46,4 @@
   * [x] IPv6
   * [x] Domain
 
-* [ ] Rulesets
+### Rulesets
