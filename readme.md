@@ -1,28 +1,48 @@
-# SOCKS
+# SoxyProxy
+
+## Getting Started
+
+### Installing
+
+SoxyProxy can be installed using pip:
+
+```bash
+pip install soxyproxy
+```
+
+## Usage
+
+To test that installation was successful, try:
+
+```bash
+python -m soxyproxy --help
+```
 
 ## Features
 
-* Protocols
-  * [x] SOCKS4
-  * [x] SOCKS5
+### Protocols
 
-* Protocols
-  * [x] TCP
-  * [ ] UDP
+- [x] SOCKS4
 
-* Auth
-  * [x] None
-  * [x] Login/Password
-  * [ ] GSSAPI
+- [x] SOCKS5
 
-* CMC
-  * [x] Connect
-  * [ ] Bind
-  * [ ] ASSOCIATE
+  * Protocols
+    * [x] TCP
+    * [ ] UDP
 
-* ADDR
-  * [x] IPv4
-  * [x] IPv6
-  * [x] Domain
+  * Auth
+    * [x] None
+    * [x] Login/Password
+    * [ ] GSSAPI
 
-* [ ] Rulesets
+  * CMC
+    * [x] Connect
+    * [ ] Bind
+    * [ ] ASSOCIATE
+
+  * ADDR
+    * [x] IPv4
+    * [x] IPv6
+    * [x] Domain
+
+### Rulesets
