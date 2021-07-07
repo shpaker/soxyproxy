@@ -15,35 +15,34 @@ pip install soxyproxy
 To test that installation was successful, try:
 
 ```bash
-
-python -m soxyproxy socks5
+python -m soxyproxy --help
 ```
 
 ## Features
 
 ### Protocols
 
-#### SOCKS4
+- [x] SOCKS4
 
-#### SOCKS5
+- [x] SOCKS5
 
-* Protocols
-  * [x] TCP
-  * [ ] UDP
+  * Protocols
+    * [x] TCP
+    * [ ] UDP
 
-* Auth
-  * [x] None
-  * [x] Login/Password
-  * [ ] GSSAPI
+  * Auth
+    * [x] None
+    * [x] Login/Password
+    * [ ] GSSAPI
 
-* CMC
-  * [x] Connect
-  * [ ] Bind
-  * [ ] ASSOCIATE
+  * CMC
+    * [x] Connect
+    * [ ] Bind
+    * [ ] ASSOCIATE
 
-* ADDR
-  * [x] IPv4
-  * [x] IPv6
-  * [x] Domain
+  * ADDR
+    * [x] IPv4
+    * [x] IPv6
+    * [x] Domain
 
 ### Rulesets
