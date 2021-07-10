@@ -6,6 +6,7 @@ from typing import Union, Optional
 from passlib.apache import HtpasswdFile
 from typer import Option, Typer
 
+from soxyproxy.models.ruleset import RuleSet
 from soxyproxy.socks4 import Socks4
 from soxyproxy.socks5 import Socks5
 
@@ -38,8 +39,15 @@ def socks4(
     port: int = Option(
         DEFAULT_PORT,
     ),
+    ruleset: Optional[Path] = Option(
+        None,
+        exists=True,
+        dir_okay=False,
+        file_okay=True,
+    ),
 ) -> None:
-    proxy = Socks4()
+    ruleset_model = RuleSet.from_file(ruleset) if ruleset else RuleSet()
+    proxy = Socks4(ruleset=ruleset_model)
     start_server(proxy, host, port)
 
 
@@ -58,12 +66,19 @@ def socks5(
         file_okay=True,
         help="Apache-Like Authentication (htpasswd)",
     ),
+    ruleset: Optional[Path] = Option(
+        None,
+        exists=True,
+        dir_okay=False,
+        file_okay=True,
+    ),
 ) -> None:
     auther = None
+    ruleset_model = RuleSet.from_file(ruleset) if ruleset else RuleSet()
     if passwords:
         htpasswd = HtpasswdFile(passwords)
         auther = htpasswd.check_password
-    proxy = Socks5(auther=auther)
+    proxy = Socks5(ruleset=ruleset_model, auther=auther)
     start_server(proxy, host, port)
 
 
