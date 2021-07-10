@@ -2,14 +2,14 @@ from ipaddress import IPv4Network, IPv6Network, IPv4Address, IPv6Address
 from typing import Optional, Union
 
 from soxyproxy.models.client import ClientModel
-from soxyproxy.models.ruleset import RuleSet, ClientRule, RuleAction, ProxyRule
+from soxyproxy.models.ruleset import RuleSet, ConnectionRule, RuleAction, ProxyRule
 
 DEFAULT_RULE_ACTION = RuleAction.PASS
 
 
 def check_matched_from(
     client: ClientModel,
-    rule: Union[ClientRule, ProxyRule],
+    rule: Union[ConnectionRule, ProxyRule],
 ) -> bool:
     if not rule.from_address:
         return True
@@ -26,7 +26,7 @@ def check_matched_to(
     rule: ProxyRule,
 ) -> bool:
     if not rule.to_address:
-        return False
+        return True
     from_is_network = isinstance(rule.from_address, (IPv4Network, IPv6Network))
     if from_is_network and request_to in rule.to_address:  # type: ignore
         return True
@@ -35,31 +35,29 @@ def check_matched_to(
     return False
 
 
-def check_client_rules_action(
+def check_connection_rules_actions(
     ruleset: RuleSet,
     client: ClientModel,
-) -> Optional[ClientRule]:
-    matched_rule: Optional[ClientRule] = None
-    for rule in ruleset.__root__:
-        if not isinstance(rule, ClientRule):
+) -> Optional[ConnectionRule]:
+    for rule in reversed(ruleset.connection):
+        if not isinstance(rule, ConnectionRule):
             continue
         if check_matched_from(client, rule):
-            matched_rule = rule
-    return matched_rule
+            return rule
+    return None
 
 
-def check_proxy_rules_action(
+def check_proxy_rules_actions(
     ruleset: RuleSet,
     client: ClientModel,
     request_to: Union[IPv4Address, IPv6Address],
     user: Optional[str] = None,
 ) -> Optional[ProxyRule]:
-    matched_rule: Optional[ProxyRule] = None
-    for rule in ruleset.__root__:
+    for rule in reversed(ruleset.proxy):
         if not isinstance(rule, ProxyRule):
             continue
+        if rule.user and rule.user != user:
+            continue
         if check_matched_from(client, rule) and check_matched_to(request_to, rule):
-            if rule.user and rule.user != user:
-                continue
-            matched_rule = rule
-    return matched_rule
+            return rule
+    return None

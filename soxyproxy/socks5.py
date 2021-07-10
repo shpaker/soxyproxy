@@ -1,12 +1,15 @@
-import socket
 from asyncio import StreamReader, StreamWriter, open_connection
+from ipaddress import IPv4Address, IPv6Address
 from logging import getLogger
-from typing import Optional, Tuple, Callable
+from socket import gaierror
+from typing import Optional, Tuple, Callable, Union, Any
 
 from soxyproxy.consts import Socks5AuthMethod, Socks5ConnectionReply
-from soxyproxy.models.ruleset import RuleSet
+from soxyproxy.models.client import ClientModel
+from soxyproxy.models.ruleset import RuleSet, RuleAction
 from soxyproxy.models.socks5 import handshake, connection, username_auth
 from soxyproxy.server import ServerBase
+from soxyproxy.utils import check_proxy_rules_actions
 
 logger = getLogger(__name__)
 
@@ -49,91 +52,106 @@ class Socks5(ServerBase):
         self,
         client_reader: StreamReader,
         client_writer: StreamWriter,
-    ) -> None:
-
-        host, port = client_writer.get_extra_info("peername")
-
+    ) -> Optional[username_auth.RequestModel]:
         if self.auth_methods is Socks5AuthMethod.NO_AUTHENTICATION:
             return None
+        if self.auther is None:
+            return None
+        request_raw = await client_reader.read(128)
+        client = ClientModel.from_writer(client_writer)
+        request = username_auth.RequestModel.loads(request_raw)
+        logger.debug(f"{client.host}:{client.port} -> {request}")
 
-        if self.auther is not None:
-            request_raw = await client_reader.read(128)
-            request = username_auth.RequestModel.loads(request_raw)
+        auth_success = self.auther(request.username, request.password)
 
-            logger.debug(f"{host}:{port} -> {request}")
-            # self._log_message(client_writer, request)
+        if auth_success is None:
+            auth_success = False
 
-            auth_success = self.auther(request.username, request.password)
+        response = username_auth.ResponseModel(status=auth_success)
 
-            if auth_success is None:
-                auth_success = False
+        logger.debug(f"{client.host}:{client.port} <- {response}")
 
-            response = username_auth.ResponseModel(status=auth_success)
-
-            logger.debug(f"{host}:{port} <- {response}")
-
-            if not auth_success:
-                client_writer.write(response.dumps())
-                raise ConnectionError("authorization failed")
-
+        if not auth_success:
             client_writer.write(response.dumps())
+            raise ConnectionError("authorization failed")
+
+        client_writer.write(response.dumps())
+        return request
 
     async def connect(  # type: ignore
         self,
         client_reader: StreamReader,
         client_writer: StreamWriter,
+        **kwargs,
     ) -> Tuple[StreamReader, StreamWriter]:
-        host, port = client_writer.get_extra_info("peername")
-
+        auth_request: Optional[username_auth.RequestModel] = kwargs.get("auth_request")
         request_raw = await client_reader.read(512)
-        response: Optional[connection.ResponseModel] = None
-
+        client = ClientModel.from_writer(client_writer)
         try:
             request = connection.RequestModel.loads(request_raw)
-
-            logger.debug(f"{host}:{port} -> {request}")
+            matched_rule = check_proxy_rules_actions(
+                ruleset=self.ruleset,
+                client=client,
+                request_to=request.address,
+                user=auth_request.username if auth_request else None,
+            )
+            if matched_rule and matched_rule.action is RuleAction.BLOCK:
+                raise RuntimeError(
+                    f"{client.host} ! connection blocked by rule: {matched_rule.json()}"
+                )
+            logger.debug(f"{client.host}:{client.port} -> {request}")
             remote_reader, remote_writer = await open_connection(
                 host=str(request.address),
                 port=request.port,
             )
-            response = connection.ResponseModel(
-                reply=Socks5ConnectionReply.SUCCEEDED,
-                address=request.address,
-                port=request.port,
+        except (ConnectionError, TimeoutError, gaierror) as err:
+            address: Union[str, IPv4Address, IPv6Address] = connection.extract_address(
+                request_raw
             )
-            return remote_reader, remote_writer
-        except socket.gaierror:
+            if isinstance(err, gaierror):
+                address = connection.extract_domain_name(request_raw)
             response = connection.ResponseModel(
                 reply=Socks5ConnectionReply.HOST_UNREACHABLE,
-                address=connection.extract_domain_name(request_raw),
+                address=address,
                 port=connection.extract_port(request_raw),
             )
-        except (ConnectionError, TimeoutError):
+            client_writer.write(response.dumps())
+            raise ConnectionError(err) from err
+        except RuntimeError as err:
             response = connection.ResponseModel(
-                reply=Socks5ConnectionReply.HOST_UNREACHABLE,
+                reply=Socks5ConnectionReply.CONNECTION_NOT_ALLOWED_BY_RULESET,
                 address=connection.extract_address(request_raw),
                 port=connection.extract_port(request_raw),
             )
-        finally:
-            if response:
-                logger.debug(f"{host}:{port} -> {response}")
-                client_writer.write(response.dumps())
-
-            if response and response.reply is not Socks5ConnectionReply.SUCCEEDED:
-                raise ConnectionError(response.reply.name)
+            client_writer.write(response.dumps())
+            raise ConnectionError(err) from err
+        except Exception as err:
+            raise ValueError(err) from err
+        response = connection.ResponseModel(
+            reply=Socks5ConnectionReply.SUCCEEDED,
+            address=request.address,
+            port=request.port,
+        )
+        logger.debug(f"{client.host}:{client.port} -> {response}")
+        client_writer.write(response.dumps())
+        return remote_reader, remote_writer
 
     async def serve_client(
-        self, client_reader: StreamReader, client_writer: StreamWriter
+        self,
+        client_reader: StreamReader,
+        client_writer: StreamWriter,
+        **kwargs: Any,
     ) -> None:
         await self.handshake(
             client_reader=client_reader,
             client_writer=client_writer,
         )
-        await self.auth(
+        auth_request = await self.auth(
             client_reader=client_reader,
             client_writer=client_writer,
         )
         await super().serve_client(
             client_reader=client_reader,
             client_writer=client_writer,
+            auth_request=auth_request,
         )

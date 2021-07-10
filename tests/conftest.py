@@ -6,7 +6,7 @@ from typing import Dict
 from passlib.apache import HtpasswdFile
 from pytest import fixture, mark
 
-from soxyproxy.models.ruleset import RuleSet, ClientRule, ProxyRule
+from soxyproxy.models.ruleset import RuleSet, ConnectionRule, ProxyRule
 from soxyproxy.socks4 import Socks4
 from soxyproxy.socks5 import Socks5
 
@@ -98,6 +98,7 @@ async def run_socks5_server():
 async def run_socks5_auth_server():
     ht = HtpasswdFile()
     ht.set_password("someuser", "mypass")
+    ht.set_password("blocked", "mypass")
     proxy = Socks5(auther=ht.check_password)
     pending = gather(
         proxy.run(
@@ -113,7 +114,11 @@ async def run_socks5_auth_server():
 @fixture()
 async def run_socks4_server_with_client_block_rule():
     client_rule_dict = {"action": "block", "from": "0.0.0.0/0"}
-    ruleset = RuleSet(__root__=(client_rule_dict,))
+    ruleset = RuleSet(
+        connection=(
+            client_rule_dict,
+        )
+    )
     proxy = Socks4(ruleset=ruleset)
     pending = gather(
         proxy.run(host="0.0.0.0", port=TEST_SERVER_PORT),
@@ -126,8 +131,32 @@ async def run_socks4_server_with_client_block_rule():
 @fixture()
 async def run_socks4_server_with_proxy_block_rule():
     proxy_rule_dict = {"action": "block", "to": "8.8.8.8"}
-    ruleset = RuleSet(__root__=(proxy_rule_dict,))
+    ruleset = RuleSet(
+        proxy=(
+            proxy_rule_dict,
+        ))
     proxy = Socks4(ruleset=ruleset)
+    pending = gather(
+        proxy.run(host="0.0.0.0", port=TEST_SERVER_PORT),
+    )
+    yield
+    pending.cancel()
+
+
+@mark.asyncio
+@fixture()
+async def run_socks5_server_with_proxy_block_rule():
+    proxy_rule_dict_1 = {"action": "block", "user": "blocked"}
+    proxy_rule_dict_2 = {"action": "block", "user": "someuser", "to": "8.8.8.8"}
+    ht = HtpasswdFile()
+    ht.set_password("someuser", "mypass")
+    ht.set_password("blocked", "mypass")
+    ruleset = RuleSet(
+        proxy=(
+            proxy_rule_dict_1,
+            proxy_rule_dict_2,
+        ))
+    proxy = Socks5(auther=ht.check_password, ruleset=ruleset)
     pending = gather(
         proxy.run(host="0.0.0.0", port=TEST_SERVER_PORT),
     )

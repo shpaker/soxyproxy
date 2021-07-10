@@ -16,7 +16,7 @@ class RuleAction(str, Enum):
     PASS = "pass"
 
 
-class ClientRule(BaseModel):
+class ConnectionRule(BaseModel):
     action: RuleAction
     from_address: Union[IPvAnyAddress, IPvAnyNetwork] = Field(..., alias="from")
 
@@ -31,7 +31,8 @@ class ProxyRule(BaseModel):
 
 
 class RuleSet(BaseModel):
-    __root__: Sequence[Union[ClientRule, ProxyRule]] = Field(default_factory=tuple)
+    connection: Sequence[ConnectionRule] = Field(default_factory=tuple)
+    proxy: Sequence[ProxyRule] = Field(default_factory=tuple)
 
     @classmethod
     def from_file(
@@ -40,4 +41,4 @@ class RuleSet(BaseModel):
     ) -> "RuleSet":
         with open(filepath, "r") as file:
             data = safe_load(file)
-            return RuleSet(__root__=data)
+            return RuleSet(**data)

@@ -9,11 +9,11 @@ from asyncio import (
     wait,
 )
 from logging import getLogger
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
 
 from soxyproxy.models.client import ClientModel
 from soxyproxy.models.ruleset import RuleSet, RuleAction
-from soxyproxy.utils import check_client_rules_action
+from soxyproxy.utils import check_connection_rules_actions
 
 READ_BYTES_DEFAULT = 1024
 logger = getLogger(__name__)
@@ -32,7 +32,9 @@ class ServerBase(ABC):
         client_writer: StreamWriter,
     ) -> None:
         client = ClientModel.from_writer(client_writer)
-        matched_rule = check_client_rules_action(ruleset=self.ruleset, client=client)
+        matched_rule = check_connection_rules_actions(
+            ruleset=self.ruleset, client=client
+        )
         try:
             if matched_rule and matched_rule.action is RuleAction.BLOCK:
                 raise ConnectionError(
@@ -69,6 +71,7 @@ class ServerBase(ABC):
         self,
         client_reader: StreamReader,
         client_writer: StreamWriter,
+        **kwargs: Any,
     ) -> Tuple[StreamReader, StreamWriter]:
         raise NotImplementedError
 
@@ -76,11 +79,13 @@ class ServerBase(ABC):
         self,
         client_reader: StreamReader,
         client_writer: StreamWriter,
+        **kwargs: Any,
     ) -> None:
         client_host, client_port = client_writer.get_extra_info("peername")
         remote_reader, remote_writer = await self.connect(
             client_reader=client_reader,
             client_writer=client_writer,
+            **kwargs,
         )
         remote_host, remote_port = remote_writer.get_extra_info("peername")
         logger.info(
