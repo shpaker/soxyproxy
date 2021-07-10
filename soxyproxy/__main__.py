@@ -1,8 +1,10 @@
 import asyncio
 import logging
+from pathlib import Path
 from typing import Union, Optional
 
-from typer import Option, Typer, BadParameter  # pylint: disable=wrong-import-order
+from passlib.apache import HtpasswdFile
+from typer import Option, Typer
 
 from soxyproxy.socks4 import Socks4
 from soxyproxy.socks5 import Socks5
@@ -30,8 +32,12 @@ def start_server(
 
 @app.command()
 def socks4(
-    host: str = Option(DEFAULT_HOST),
-    port: int = Option(DEFAULT_PORT),
+    host: str = Option(
+        DEFAULT_HOST,
+    ),
+    port: int = Option(
+        DEFAULT_PORT,
+    ),
 ) -> None:
     proxy = Socks4()
     start_server(proxy, host, port)
@@ -39,15 +45,25 @@ def socks4(
 
 @app.command()
 def socks5(
-    host: str = Option(DEFAULT_HOST),
-    port: int = Option(DEFAULT_PORT),
-    username: Optional[str] = Option(None),
-    password: Optional[str] = Option(None),
+    host: str = Option(
+        DEFAULT_HOST,
+    ),
+    port: int = Option(
+        DEFAULT_PORT,
+    ),
+    passwords: Optional[Path] = Option(
+        None,
+        exists=True,
+        dir_okay=False,
+        file_okay=True,
+        help="Apache-Like Authentication (htpasswd)",
+    ),
 ) -> None:
-    try:
-        proxy = Socks5(username=username, password=password)
-    except KeyError as err:
-        raise BadParameter("Authentication credentials required") from err
+    auther = None
+    if passwords:
+        htpasswd = HtpasswdFile(passwords)
+        auther = htpasswd.check_password
+    proxy = Socks5(auther=auther)
     start_server(proxy, host, port)
 
 

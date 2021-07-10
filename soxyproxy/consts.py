@@ -1,7 +1,12 @@
-from enum import unique, IntEnum
+from enum import unique, IntEnum, Enum
 
 PORT_BYTES_LENGTH = 2
 PORT_BYTES_ORDER = "big"
+
+
+class Auther(str, Enum):
+    PAM = "pam"
+    HTPASSWD = "htpasswd"
 
 
 @unique
