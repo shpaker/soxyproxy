@@ -12,8 +12,8 @@ from logging import getLogger
 from typing import Optional, Tuple
 
 from soxyproxy.models.client import ClientModel
-from soxyproxy.models.ruleset import RuleSet
-from soxyproxy.utils import check_block_by_client_rules
+from soxyproxy.models.ruleset import RuleSet, RuleAction
+from soxyproxy.utils import check_client_rules_action
 
 READ_BYTES_DEFAULT = 1024
 logger = getLogger(__name__)
@@ -32,13 +32,12 @@ class ServerBase(ABC):
         client_writer: StreamWriter,
     ) -> None:
         client = ClientModel.from_writer(client_writer)
-        should_block = check_block_by_client_rules(
-            ruleset=self.ruleset,
-            client=client,
-        )
+        matched_rule = check_client_rules_action(ruleset=self.ruleset, client=client)
         try:
-            if should_block:
-                raise ConnectionError("Blocked by rule")
+            if matched_rule and matched_rule.action is RuleAction.BLOCK:
+                raise ConnectionError(
+                    f"{client.host} ! connection blocked by rule: {matched_rule.json()}"
+                )
             await self.serve_client(
                 client_reader=client_reader,
                 client_writer=client_writer,

@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Sequence
 
 from pydantic import (
     BaseModel,
@@ -24,12 +24,14 @@ class ClientRule(BaseModel):
 class ProxyRule(BaseModel):
     action: RuleAction
     user: Optional[str] = None
-    from_address: Union[IPvAnyAddress, IPvAnyNetwork] = Field(..., alias="from")
-    to_address: Union[IPvAnyAddress, IPvAnyNetwork] = Field(..., alias="to")
+    from_address: Optional[Union[IPvAnyAddress, IPvAnyNetwork]] = Field(
+        None, alias="from"
+    )
+    to_address: Optional[Union[IPvAnyAddress, IPvAnyNetwork]] = Field(None, alias="to")
 
 
 class RuleSet(BaseModel):
-    __root__: Tuple[Union[ClientRule, ProxyRule]] = Field(default_factory=tuple)
+    __root__: Sequence[Union[ClientRule, ProxyRule]] = Field(default_factory=tuple)
 
     @classmethod
     def from_file(

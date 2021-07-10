@@ -108,7 +108,7 @@ class Socks5(ServerBase):
                 address=connection.extract_domain_name(request_raw),
                 port=connection.extract_port(request_raw),
             )
-        except (OSError, TimeoutError):
+        except (ConnectionError, TimeoutError):
             response = connection.ResponseModel(
                 reply=Socks5ConnectionReply.HOST_UNREACHABLE,
                 address=connection.extract_address(request_raw),
