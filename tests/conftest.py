@@ -3,6 +3,7 @@ from asyncio import open_connection
 from logging import getLogger, basicConfig
 from typing import Dict
 
+from passlib.apache import HtpasswdFile
 from pytest import fixture, mark
 
 from soxyproxy.socks4 import Socks4
@@ -94,10 +95,9 @@ async def run_socks5_server():
 @mark.asyncio
 @fixture()
 async def run_socks5_auth_server():
-    proxy = Socks5(
-        username="test",
-        password="qwerty"
-    )
+    ht = HtpasswdFile()
+    ht.set_password("someuser", "mypass")
+    proxy = Socks5(auther=ht.check_password)
     pending = gather(
         proxy.run(
             host="0.0.0.0",

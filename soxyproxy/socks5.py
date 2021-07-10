@@ -1,7 +1,7 @@
 import socket
 from asyncio import StreamReader, StreamWriter, open_connection
 from logging import getLogger
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Callable
 
 from soxyproxy.consts import Socks5AuthMethod, Socks5ConnectionReply
 from soxyproxy.models.socks5 import handshake, connection, username_auth
@@ -12,18 +12,12 @@ logger = getLogger(__name__)
 
 class Socks5(ServerBase):
     def __init__(
-        self, username: Optional[str] = None, password: Optional[str] = None
+        self,
+        auther: Optional[Callable[[str, str], Optional[bool]]] = None,
     ) -> None:
-
-        if username and not password or not username and password:
-            raise KeyError
-
-        self.username = username
-        self.password = password
-        self.auth_method = (
-            Socks5AuthMethod.USERNAME
-            if username
-            else Socks5AuthMethod.NO_AUTHENTICATION
+        self.auther = auther
+        self.auth_methods = (
+            Socks5AuthMethod.USERNAME if auther else Socks5AuthMethod.NO_AUTHENTICATION
         )
 
     async def handshake(
@@ -37,8 +31,8 @@ class Socks5(ServerBase):
         logger.debug(f"{host}:{port} -> {request.json()}")
 
         auth = Socks5AuthMethod.NO_ACCEPTABLE
-        if self.auth_method in request.auth_methods:
-            auth = self.auth_method
+        if self.auth_methods in request.auth_methods:
+            auth = self.auth_methods
 
         response = handshake.ResponseModel(auth_method=auth)
 
@@ -56,19 +50,21 @@ class Socks5(ServerBase):
 
         host, port = client_writer.get_extra_info("peername")
 
-        if self.auth_method is Socks5AuthMethod.NO_AUTHENTICATION:
+        if self.auth_methods is Socks5AuthMethod.NO_AUTHENTICATION:
             return None
 
-        if self.auth_method is Socks5AuthMethod.USERNAME:
+        if self.auther is not None:
             request_raw = await client_reader.read(128)
             request = username_auth.RequestModel.loads(request_raw)
 
             logger.debug(f"{host}:{port} -> {request}")
             # self._log_message(client_writer, request)
 
-            auth_success = (
-                request.username == self.username and request.password == self.password
-            )
+            auth_success = self.auther(request.username, request.password)
+
+            if auth_success is None:
+                auth_success = False
+
             response = username_auth.ResponseModel(status=auth_success)
 
             logger.debug(f"{host}:{port} <- {response}")

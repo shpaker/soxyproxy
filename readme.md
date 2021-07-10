@@ -45,4 +45,10 @@ python -m soxyproxy --help
     * [x] IPv6
     * [x] Domain
 
+## Configuration
+
+### Apache-Like Authentication (htpasswd)
+
+https://pypi.org/project/pypiserver/#apache-like-authentication-htpasswd
+
 ### Rulesets
