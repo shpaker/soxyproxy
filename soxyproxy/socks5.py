@@ -4,6 +4,7 @@ from logging import getLogger
 from typing import Optional, Tuple, Callable
 
 from soxyproxy.consts import Socks5AuthMethod, Socks5ConnectionReply
+from soxyproxy.models.ruleset import RuleSet
 from soxyproxy.models.socks5 import handshake, connection, username_auth
 from soxyproxy.server import ServerBase
 
@@ -13,8 +14,10 @@ logger = getLogger(__name__)
 class Socks5(ServerBase):
     def __init__(
         self,
+        ruleset: RuleSet = RuleSet(),
         auther: Optional[Callable[[str, str], Optional[bool]]] = None,
     ) -> None:
+        super().__init__(ruleset=ruleset)
         self.auther = auther
         self.auth_methods = (
             Socks5AuthMethod.USERNAME if auther else Socks5AuthMethod.NO_AUTHENTICATION

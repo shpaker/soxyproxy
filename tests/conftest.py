@@ -6,6 +6,7 @@ from typing import Dict
 from passlib.apache import HtpasswdFile
 from pytest import fixture, mark
 
+from soxyproxy.models.ruleset import RuleSet, ClientRule, ProxyRule
 from soxyproxy.socks4 import Socks4
 from soxyproxy.socks5 import Socks5
 
@@ -103,6 +104,21 @@ async def run_socks5_auth_server():
             host="0.0.0.0",
             port=TEST_SERVER_PORT,
         ),
+    )
+    yield
+    pending.cancel()
+
+
+@mark.asyncio
+@fixture()
+async def run_socks4_server_with_client_block_rule():
+    rule_dict = {"action": "block", "from": "0.0.0.0/0"},
+    ruleset = RuleSet(__root__=
+        rule_dict,
+    )
+    proxy = Socks4(ruleset=ruleset)
+    pending = gather(
+        proxy.run(host="0.0.0.0", port=TEST_SERVER_PORT),
     )
     yield
     pending.cancel()
