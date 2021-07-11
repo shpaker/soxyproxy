@@ -1,8 +1,8 @@
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from pydantic import Field, validator
 
-from soxyproxy.consts import SocksVersion, Socks5AuthMethod
+from soxyproxy.consts import Socks5AuthMethod, SocksVersion
 from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
 
 SOCKS_VERSION_INDEX = 0

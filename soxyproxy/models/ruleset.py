@@ -1,13 +1,8 @@
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Union, Sequence
+from typing import Optional, Sequence, Union
 
-from pydantic import (
-    BaseModel,
-    IPvAnyAddress,
-    IPvAnyNetwork,
-    Field,
-)
+from pydantic import BaseModel, Field, IPvAnyAddress, IPvAnyNetwork
 from yaml import safe_load
 
 

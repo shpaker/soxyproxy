@@ -1,8 +1,8 @@
-from ipaddress import IPv4Network, IPv6Network, IPv4Address, IPv6Address
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 from typing import Optional, Union
 
 from soxyproxy.models.client import ClientModel
-from soxyproxy.models.ruleset import RuleSet, ConnectionRule, RuleAction, ProxyRule
+from soxyproxy.models.ruleset import ConnectionRule, ProxyRule, RuleAction, RuleSet
 
 DEFAULT_RULE_ACTION = RuleAction.PASS
 

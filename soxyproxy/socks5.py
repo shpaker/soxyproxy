@@ -2,12 +2,13 @@ from asyncio import StreamReader, StreamWriter, open_connection
 from ipaddress import IPv4Address, IPv6Address
 from logging import getLogger
 from socket import gaierror
-from typing import Optional, Tuple, Callable, Union, Any
+from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
 from soxyproxy.consts import Socks5AuthMethod, Socks5ConnectionReply
+from soxyproxy.internal.authers import check_authers
 from soxyproxy.models.client import ClientModel
-from soxyproxy.models.ruleset import RuleSet, RuleAction
-from soxyproxy.models.socks5 import handshake, connection, username_auth
+from soxyproxy.models.ruleset import RuleAction, RuleSet
+from soxyproxy.models.socks5 import connection, handshake, username_auth
 from soxyproxy.server import ServerBase
 from soxyproxy.utils import check_proxy_rules_actions
 
@@ -18,12 +19,12 @@ class Socks5(ServerBase):
     def __init__(
         self,
         ruleset: RuleSet = RuleSet(),
-        auther: Optional[Callable[[str, str], Optional[bool]]] = None,
+        authers: Sequence[Callable[[str, str], Optional[bool]]] = tuple(),
     ) -> None:
         super().__init__(ruleset=ruleset)
-        self.auther = auther
+        self.authers = authers
         self.auth_methods = (
-            Socks5AuthMethod.USERNAME if auther else Socks5AuthMethod.NO_AUTHENTICATION
+            Socks5AuthMethod.USERNAME if authers else Socks5AuthMethod.NO_AUTHENTICATION
         )
 
     async def handshake(
@@ -55,14 +56,14 @@ class Socks5(ServerBase):
     ) -> Optional[username_auth.RequestModel]:
         if self.auth_methods is Socks5AuthMethod.NO_AUTHENTICATION:
             return None
-        if self.auther is None:
+        if not self.authers:
             return None
         request_raw = await client_reader.read(128)
         client = ClientModel.from_writer(client_writer)
         request = username_auth.RequestModel.loads(request_raw)
         logger.debug(f"{client.host}:{client.port} -> {request}")
 
-        auth_success = self.auther(request.username, request.password)
+        auth_success = check_authers(request.username, request.password, self.authers)
 
         if auth_success is None:
             auth_success = False

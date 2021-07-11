@@ -3,11 +3,12 @@ from ipaddress import IPv4Address
 from pydantic import validator
 
 from soxyproxy.consts import (
-    Socks4Reply,
     PORT_BYTES_LENGTH,
     PORT_BYTES_ORDER,
+    Socks4Command,
+    Socks4Reply,
+    SocksVersion,
 )
-from soxyproxy.consts import SocksVersion, Socks4Command
 from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
 
 SOCKS_VERSION_INDEX = 0

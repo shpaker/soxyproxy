@@ -9,10 +9,10 @@ from asyncio import (
     wait,
 )
 from logging import getLogger
-from typing import Optional, Tuple, Any
+from typing import Any, Optional, Tuple
 
 from soxyproxy.models.client import ClientModel
-from soxyproxy.models.ruleset import RuleSet, RuleAction
+from soxyproxy.models.ruleset import RuleAction, RuleSet
 from soxyproxy.utils import check_connection_rules_actions
 
 READ_BYTES_DEFAULT = 1024

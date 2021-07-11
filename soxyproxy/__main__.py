@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import Union, Optional
+from typing import Optional, Union
 
 from passlib.apache import HtpasswdFile
 from typer import Option, Typer
@@ -64,7 +64,7 @@ def socks5(
         exists=True,
         dir_okay=False,
         file_okay=True,
-        help="Apache-Like Authentication (htpasswd)",
+        help="Apache-Like Authentication (.htpasswd)",
     ),
     ruleset: Optional[Path] = Option(
         None,
@@ -73,12 +73,12 @@ def socks5(
         file_okay=True,
     ),
 ) -> None:
-    auther = None
+    authers = list()
     ruleset_model = RuleSet.from_file(ruleset) if ruleset else RuleSet()
     if passwords:
         htpasswd = HtpasswdFile(passwords)
-        auther = htpasswd.check_password
-    proxy = Socks5(ruleset=ruleset_model, auther=auther)
+        authers.append(htpasswd.check_password)
+    proxy = Socks5(ruleset=ruleset_model, authers=authers)
     start_server(proxy, host, port)
 
 

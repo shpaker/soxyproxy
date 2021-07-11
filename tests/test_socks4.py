@@ -1,7 +1,7 @@
-from logging import getLogger, basicConfig
+from logging import basicConfig, getLogger
 
-from httpx import Response, AsyncClient
-from httpx_socks import AsyncProxyTransport, ProxyError
+from httpx import AsyncClient, Response
+from httpx_socks import ProxyError
 from pytest import mark
 
 from soxyproxy.consts import Socks4Reply
@@ -12,9 +12,10 @@ basicConfig(level="DEBUG")
 
 @mark.asyncio
 async def test_correct_request(
-    run_socks4_server,  # noqa
+    run_socks4_server,  # noqa, pylint: disable=unused-argument
+    proxy_transport,
 ) -> None:
-    transport = AsyncProxyTransport.from_url('socks4://127.0.0.1:8888')
+    transport = proxy_transport("socks4")
     async with AsyncClient(transport=transport) as client:
         res: Response = await client.get("https://httpbin.org/get")
         res.raise_for_status()
@@ -22,9 +23,10 @@ async def test_correct_request(
 
 @mark.asyncio
 async def test_incorrect_request(
-    run_socks4_server,  # noqa
+    run_socks4_server,  # noqa, pylint: disable=unused-argument
+    proxy_transport,
 ) -> None:
-    transport = AsyncProxyTransport.from_url('socks4://127.0.0.1:8888')
+    transport = proxy_transport("socks4")
     async with AsyncClient(transport=transport) as client:
         try:
             res: Response = await client.get("https://127.0.0.1:9449/get")
@@ -35,7 +37,7 @@ async def test_incorrect_request(
 
 @mark.asyncio
 async def test_correct_package(
-    run_socks4_server,  # noqa
+    run_socks4_server,  # noqa, pylint: disable=unused-argument
     send_data,
 ) -> None:
     msg = b"\x04\x01\x01\xbb\x12\xeb|\xd6\x00"
@@ -46,7 +48,7 @@ async def test_correct_package(
 
 @mark.asyncio
 async def test_incorrect_protocol(
-    run_socks4_server,  # noqa
+    run_socks4_server,  # noqa, pylint: disable=unused-argument
     send_data,
 ) -> None:
     broken_msg = b"\x05\x01\x01\xbb\x12\xeb|\xd6\x00"
@@ -56,7 +58,7 @@ async def test_incorrect_protocol(
 
 @mark.asyncio
 async def test_short_package(
-    run_socks4_server,  # noqa
+    run_socks4_server,  # noqa, pylint: disable=unused-argument
     send_data,
 ) -> None:
     broken_msg = b"\x05\x01\x01"
@@ -66,7 +68,7 @@ async def test_short_package(
 
 @mark.asyncio
 async def test_not_null_terminated(
-    run_socks4_server,  # noqa
+    run_socks4_server,  # noqa, pylint: disable=unused-argument
     send_data,
 ) -> None:
     broken_msg = b"\x04\x01\x01\xbb\x12\xeb|\xd6\x01"

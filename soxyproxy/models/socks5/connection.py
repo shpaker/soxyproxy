@@ -6,11 +6,13 @@ from typing import Union
 from pydantic import validator
 
 from soxyproxy.consts import (
-    Socks5ConnectionReply,
     PORT_BYTES_LENGTH,
     PORT_BYTES_ORDER,
+    Socks5AddressType,
+    Socks5Command,
+    Socks5ConnectionReply,
+    SocksVersion,
 )
-from soxyproxy.consts import Socks5Command, SocksVersion, Socks5AddressType
 from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
 
 SOCKS5_PACKAGE_RESERVED_VALUE = 0
