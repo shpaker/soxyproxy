@@ -9,7 +9,9 @@ from soxyproxy.consts import (
     Socks4Reply,
     SocksVersion,
 )
+from soxyproxy.exceptions import SocksPackageError
 from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
+from soxyproxy.models.client import ClientModel
 
 SOCKS_VERSION_INDEX = 0
 COMMAND_INDEX = 1
@@ -65,16 +67,21 @@ class RequestModel(RequestBaseModel):
     @classmethod
     def loads(
         cls,
+        client: ClientModel,
         raw: bytes,
     ) -> "RequestModel":
-        check_raw_length(raw)
-        check_null_terminating_char(raw)
-        return cls(
-            socks_version=extract_socks_version(raw),
-            command=extract_command(raw),
-            address=extract_address(raw),
-            port=extract_port(raw),
-        )
+        try:
+            check_raw_length(raw)
+            check_null_terminating_char(raw)
+            model = cls(
+                socks_version=extract_socks_version(raw),
+                command=extract_command(raw),
+                address=extract_address(raw),
+                port=extract_port(raw),
+            )
+        except Exception as err:
+            raise SocksPackageError(client=client, raw=raw) from err
+        return model
 
 
 class ResponseModel(ResponseBaseModel):

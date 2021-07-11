@@ -1,6 +1,7 @@
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 from typing import Optional, Union
 
+from soxyproxy.exceptions import SocksRulesetError
 from soxyproxy.models.client import ClientModel
 from soxyproxy.models.ruleset import ConnectionRule, ProxyRule, RuleAction, RuleSet
 
@@ -35,9 +36,9 @@ def check_matched_to(
     return False
 
 
-def check_connection_rules_actions(
-    ruleset: RuleSet,
+def check_connection_rules(
     client: ClientModel,
+    ruleset: RuleSet,
 ) -> Optional[ConnectionRule]:
     for rule in reversed(ruleset.connection):
         if not isinstance(rule, ConnectionRule):
@@ -47,9 +48,21 @@ def check_connection_rules_actions(
     return None
 
 
-def check_proxy_rules_actions(
-    ruleset: RuleSet,
+def raise_for_connection_rules(
     client: ClientModel,
+    ruleset: RuleSet,
+) -> None:
+    matched_rule = check_connection_rules(
+        client=client,
+        ruleset=ruleset,
+    )
+    if matched_rule and matched_rule.action is RuleAction.BLOCK:
+        raise SocksRulesetError(client=client, rule=matched_rule)
+
+
+def check_proxy_rules(
+    client: ClientModel,
+    ruleset: RuleSet,
     request_to: Union[IPv4Address, IPv6Address],
     user: Optional[str] = None,
 ) -> Optional[ProxyRule]:

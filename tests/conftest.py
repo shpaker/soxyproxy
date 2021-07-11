@@ -7,8 +7,8 @@ from passlib.apache import HtpasswdFile
 from pytest import fixture, mark
 
 from soxyproxy.models.ruleset import RuleSet
-from soxyproxy.socks4 import Socks4
-from soxyproxy.socks5 import Socks5
+from soxyproxy.servers.socks4 import Socks4
+from soxyproxy.servers.socks5 import Socks5
 
 logger = getLogger(__name__)
 basicConfig(level="DEBUG")

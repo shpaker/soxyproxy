@@ -11,9 +11,10 @@ from asyncio import (
 from logging import getLogger
 from typing import Any, Optional, Tuple
 
+from soxyproxy.exceptions import SocksError
+from soxyproxy.internal.ruleset import raise_for_connection_rules
 from soxyproxy.models.client import ClientModel
-from soxyproxy.models.ruleset import RuleAction, RuleSet
-from soxyproxy.utils import check_connection_rules_actions
+from soxyproxy.models.ruleset import RuleSet
 
 READ_BYTES_DEFAULT = 1024
 logger = getLogger(__name__)
@@ -32,22 +33,16 @@ class ServerBase(ABC):
         client_writer: StreamWriter,
     ) -> None:
         client = ClientModel.from_writer(client_writer)
-        matched_rule = check_connection_rules_actions(
-            ruleset=self.ruleset, client=client
-        )
         try:
-            if matched_rule and matched_rule.action is RuleAction.BLOCK:
-                raise ConnectionError(
-                    f"{client.host} ! connection blocked by rule: {matched_rule.json()}"
-                )
+            raise_for_connection_rules(ruleset=self.ruleset, client=client)
             await self.serve_client(
                 client_reader=client_reader,
                 client_writer=client_writer,
             )
-        except ValueError as err:
-            logger.warning(f"{client.host}:{client.port} ! package error: {err}")
-        except ConnectionError as err:
-            logger.warning(f"{client.host}:{client.port} ! connection error: {err}")
+        except SocksError as err:
+            logger.info(err)
+        except Exception as err:  # pylint: disable=broad-except
+            logger.warning(f"{client} ! error: {err}")
         finally:
             if not client_writer.is_closing():
                 await client_writer.drain()

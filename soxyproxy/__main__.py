@@ -6,9 +6,7 @@ from typing import Optional, Union
 from passlib.apache import HtpasswdFile
 from typer import Option, Typer
 
-from soxyproxy.models.ruleset import RuleSet
-from soxyproxy.socks4 import Socks4
-from soxyproxy.socks5 import Socks5
+from soxyproxy import RuleSet, Socks4, Socks5
 
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 1080

@@ -6,11 +6,11 @@ from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
 from soxyproxy.consts import Socks5AuthMethod, Socks5ConnectionReply
 from soxyproxy.internal.authers import check_authers
+from soxyproxy.internal.ruleset import check_proxy_rules
 from soxyproxy.models.client import ClientModel
 from soxyproxy.models.ruleset import RuleAction, RuleSet
 from soxyproxy.models.socks5 import connection, handshake, username_auth
-from soxyproxy.server import ServerBase
-from soxyproxy.utils import check_proxy_rules_actions
+from soxyproxy.servers.base import ServerBase
 
 logger = getLogger(__name__)
 
@@ -90,7 +90,7 @@ class Socks5(ServerBase):
         client = ClientModel.from_writer(client_writer)
         try:
             request = connection.RequestModel.loads(request_raw)
-            matched_rule = check_proxy_rules_actions(
+            matched_rule = check_proxy_rules(
                 ruleset=self.ruleset,
                 client=client,
                 request_to=request.address,
