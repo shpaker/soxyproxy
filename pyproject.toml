@@ -40,7 +40,7 @@ extension-pkg-whitelist = "pydantic"
 
 [tool.poetry]
 name = "soxyproxy"
-version = "0.5.0"
+version = "0.6.0"
 description = "Pure Python SOCKS proxy server implementation"
 authors = ["Aleksandr Shpak <shpaker@gmail.com>"]
 readme = "readme.md"
