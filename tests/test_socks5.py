@@ -11,13 +11,38 @@ basicConfig(level="DEBUG")
 
 
 @mark.asyncio
-async def test_correct_request(
+async def test_correct_domain_request(
     run_socks5_server,  # noqa, pylint: disable=unused-argument
     proxy_transport,
 ) -> None:
     transport = proxy_transport("socks5")
     async with AsyncClient(transport=transport) as client:
         res: Response = await client.get("https://httpbin.org/get")
+        res.raise_for_status()
+
+
+@mark.asyncio
+async def test_correct_incorrect_domain_request(
+    run_socks5_server,  # noqa, pylint: disable=unused-argument
+    proxy_transport,
+) -> None:
+    transport = proxy_transport("socks5")
+    async with AsyncClient(transport=transport) as client:
+        try:
+            res: Response = await client.get("https://wbshcbnQOKWPOD.jhbjhbjhbjhbjhb")
+            assert not res
+        except ProxyError as err:
+            assert err
+
+
+@mark.asyncio
+async def test_correct_ip_request(
+    run_socks5_server,  # noqa, pylint: disable=unused-argument
+    proxy_transport,
+) -> None:
+    transport = proxy_transport("socks5")
+    async with AsyncClient(transport=transport) as client:
+        res: Response = await client.get("https://8.8.8.8")
         res.raise_for_status()
 
 

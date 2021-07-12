@@ -26,7 +26,7 @@ def start_server(
     port: int,
 ) -> None:
     logging.info(f"Start serving {host}:{port}")
-    asyncio.run(proxy.run(host=host, port=port))
+    asyncio.run(proxy.serve(host=host, port=port))
 
 
 @app.command()

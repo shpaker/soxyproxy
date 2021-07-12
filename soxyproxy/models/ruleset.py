@@ -19,9 +19,7 @@ class ConnectionRule(BaseModel):
 class ProxyRule(BaseModel):
     action: RuleAction
     user: Optional[str] = None
-    from_address: Optional[Union[IPvAnyAddress, IPvAnyNetwork]] = Field(
-        None, alias="from"
-    )
+    from_address: Optional[Union[IPvAnyAddress, IPvAnyNetwork]] = Field(None, alias="from")
     to_address: Optional[Union[IPvAnyAddress, IPvAnyNetwork]] = Field(None, alias="to")
 
 

@@ -1,30 +1,33 @@
 from logging import getLogger
+from typing import Optional
 
 from soxyproxy import RuleSet
 from soxyproxy.connections import SocksConnection
-from soxyproxy.consts import Socks4Reply
+from soxyproxy.consts import Socks5ConnectionReply
 from soxyproxy.exceptions import SocksRulesetError
 from soxyproxy.internal.ruleset import check_proxy_rules
 from soxyproxy.models.ruleset import RuleAction
-from soxyproxy.models.socks4 import connection
+from soxyproxy.models.socks5 import connection
 
 logger = getLogger(__name__)
 
 
-def socks4_raise_for_proxy_ruleset(
+def socks5_raise_for_proxy_ruleset(
     client: SocksConnection,
     ruleset: RuleSet,
     request: connection.RequestModel,
+    user: Optional[str],
 ) -> None:
     matched_rule = check_proxy_rules(
         client=client,
         ruleset=ruleset,
         request_to=request.address,
+        user=user,
     )
     if not matched_rule or matched_rule.action is RuleAction.PASS:
         return None
     response = connection.ResponseModel(
-        reply=Socks4Reply.REJECTED,
+        reply=Socks5ConnectionReply.CONNECTION_NOT_ALLOWED_BY_RULESET,
         address=request.address,
         port=request.port,
     )

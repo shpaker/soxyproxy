@@ -22,7 +22,7 @@ def extract_auth_methods(raw: bytes) -> List[Socks5AuthMethod]:
     return [Socks5AuthMethod(raw_method) for raw_method in list(raw[AUTH_METHOD_SLICE])]
 
 
-class RequestModel(RequestBaseModel):
+class RequestModel(RequestBaseModel["RequestModel"]):
     socks_version: SocksVersion
     auth_methods_count: int
     auth_methods: List[Socks5AuthMethod] = Field(min_items=1)
@@ -49,7 +49,7 @@ class RequestModel(RequestBaseModel):
         return value
 
     @classmethod
-    def loads(
+    def loader(
         cls,
         raw: bytes,
     ) -> "RequestModel":
@@ -64,5 +64,5 @@ class ResponseModel(ResponseBaseModel):
     socks_version: SocksVersion = SocksVersion.SOCKS5
     auth_method: Socks5AuthMethod
 
-    def dumps(self) -> bytes:
+    def dump(self) -> bytes:
         return bytes([self.socks_version.value, self.auth_method.value])

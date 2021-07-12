@@ -2,16 +2,8 @@ from ipaddress import IPv4Address
 
 from pydantic import validator
 
-from soxyproxy.consts import (
-    PORT_BYTES_LENGTH,
-    PORT_BYTES_ORDER,
-    Socks4Command,
-    Socks4Reply,
-    SocksVersion,
-)
-from soxyproxy.exceptions import SocksPackageError
+from soxyproxy.consts import PORT_BYTES_LENGTH, PORT_BYTES_ORDER, Socks4Command, Socks4Reply, SocksVersion
 from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
-from soxyproxy.models.client import ClientModel
 
 SOCKS_VERSION_INDEX = 0
 COMMAND_INDEX = 1
@@ -49,7 +41,7 @@ def check_null_terminating_char(raw: bytes) -> None:
         raise ValueError(f"package should be null-terminated: {str(raw)}")
 
 
-class RequestModel(RequestBaseModel):
+class RequestModel(RequestBaseModel["RequestModel"]):
     socks_version: SocksVersion
     command: Socks4Command
     port: int
@@ -65,23 +57,18 @@ class RequestModel(RequestBaseModel):
         return value
 
     @classmethod
-    def loads(
+    def loader(
         cls,
-        client: ClientModel,
         raw: bytes,
     ) -> "RequestModel":
-        try:
-            check_raw_length(raw)
-            check_null_terminating_char(raw)
-            model = cls(
-                socks_version=extract_socks_version(raw),
-                command=extract_command(raw),
-                address=extract_address(raw),
-                port=extract_port(raw),
-            )
-        except Exception as err:
-            raise SocksPackageError(client=client, raw=raw) from err
-        return model
+        check_raw_length(raw)
+        check_null_terminating_char(raw)
+        return cls(
+            socks_version=extract_socks_version(raw),
+            command=extract_command(raw),
+            address=extract_address(raw),
+            port=extract_port(raw),
+        )
 
 
 class ResponseModel(ResponseBaseModel):
@@ -90,14 +77,10 @@ class ResponseModel(ResponseBaseModel):
     port: int
     address: IPv4Address
 
-    def dumps(self) -> bytes:
+    def dump(self) -> bytes:
         port_bytes = int.to_bytes(
             self.port,
             PORT_BYTES_LENGTH,
             PORT_BYTES_ORDER,
         )
-        return (
-            bytes([self.reply_version, self.reply.value])
-            + port_bytes
-            + self.address.packed
-        )
+        return bytes([self.reply_version, self.reply.value]) + port_bytes + self.address.packed

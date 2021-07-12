@@ -7,8 +7,8 @@ from passlib.apache import HtpasswdFile
 from pytest import fixture, mark
 
 from soxyproxy.models.ruleset import RuleSet
-from soxyproxy.servers.socks4 import Socks4
-from soxyproxy.servers.socks5 import Socks5
+from soxyproxy.socks4 import Socks4
+from soxyproxy.socks5 import Socks5
 
 logger = getLogger(__name__)
 basicConfig(level="DEBUG")
@@ -16,9 +16,7 @@ TEST_SERVER_PORT = 8888
 
 
 @fixture()
-def proxy_transport() -> Callable[
-    [str, Optional[str], Optional[str]], AsyncProxyTransport
-]:
+def proxy_transport() -> Callable[[str, Optional[str], Optional[str]], AsyncProxyTransport]:
     def func(
         protocol: str,
         username: Optional[str] = None,
@@ -36,7 +34,7 @@ def proxy_transport() -> Callable[
 async def run_socks4_server():
     proxy = Socks4()
     pending = gather(
-        proxy.run(
+        proxy.serve(
             host="0.0.0.0",
             port=TEST_SERVER_PORT,
         ),
@@ -50,7 +48,7 @@ async def run_socks4_server():
 async def run_socks5_server():
     proxy = Socks5()
     pending = gather(
-        proxy.run(
+        proxy.serve(
             host="0.0.0.0",
             port=TEST_SERVER_PORT,
         ),
@@ -67,7 +65,7 @@ async def run_socks5_auth_server():
     htpasswd.set_password("blocked", "mypass")
     proxy = Socks5(authers=(htpasswd.check_password,))
     pending = gather(
-        proxy.run(
+        proxy.serve(
             host="0.0.0.0",
             port=TEST_SERVER_PORT,
         ),
@@ -83,7 +81,7 @@ async def run_socks4_server_with_client_block_rule():
     ruleset = RuleSet(connection=(client_rule_dict,))
     proxy = Socks4(ruleset=ruleset)
     pending = gather(
-        proxy.run(host="0.0.0.0", port=TEST_SERVER_PORT),
+        proxy.serve(host="0.0.0.0", port=TEST_SERVER_PORT),
     )
     yield
     pending.cancel()
@@ -96,7 +94,7 @@ async def run_socks4_server_with_proxy_block_rule():
     ruleset = RuleSet(proxy=(proxy_rule_dict,))
     proxy = Socks4(ruleset=ruleset)
     pending = gather(
-        proxy.run(host="0.0.0.0", port=TEST_SERVER_PORT),
+        proxy.serve(host="0.0.0.0", port=TEST_SERVER_PORT),
     )
     yield
     pending.cancel()
@@ -118,7 +116,7 @@ async def run_socks5_server_with_proxy_block_rule():
     )
     proxy = Socks5(authers=(htpasswd.check_password,), ruleset=ruleset)
     pending = gather(
-        proxy.run(host="0.0.0.0", port=TEST_SERVER_PORT),
+        proxy.serve(host="0.0.0.0", port=TEST_SERVER_PORT),
     )
     yield
     pending.cancel()

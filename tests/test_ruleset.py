@@ -61,10 +61,7 @@ async def test_blocked_request_with_proxy_user_with_partilal_blocked_ruleset(
             response = await client.get("https://8.8.8.8")
             assert not response
         except ProxyError as err:
-            assert (
-                err.error_code
-                == Socks5ConnectionReply.CONNECTION_NOT_ALLOWED_BY_RULESET
-            ), err
+            assert err.error_code == Socks5ConnectionReply.CONNECTION_NOT_ALLOWED_BY_RULESET, err
 
 
 @mark.asyncio
@@ -78,7 +75,4 @@ async def test_blocked_request_with_proxy_user_with_blocked_all_ruleset(
             response = await client.get("https://httpbin.org/get")
             assert not response
         except ProxyError as err:
-            assert (
-                err.error_code
-                == Socks5ConnectionReply.CONNECTION_NOT_ALLOWED_BY_RULESET
-            ), err
+            assert err.error_code == Socks5ConnectionReply.CONNECTION_NOT_ALLOWED_BY_RULESET, err

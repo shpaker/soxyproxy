@@ -1,7 +1,7 @@
 from ipaddress import IPV4LENGTH, IPV6LENGTH, IPv4Address, IPv6Address
 from logging import getLogger
 from socket import gethostbyname
-from typing import Union
+from typing import Optional, Tuple, Union
 
 from pydantic import validator
 
@@ -57,26 +57,29 @@ def extract_port(raw: bytes) -> int:
     )
 
 
-def extract_address(raw: bytes) -> Union[IPv4Address, IPv6Address]:
+def extract_address(
+    raw: bytes,
+) -> Tuple[Union[IPv4Address, IPv6Address], Optional[str]]:
     address_type = Socks5AddressType(raw[ADDRESS_TYPE_INDEX])
 
     if address_type == Socks5AddressType.IPV6:
         raw_address = raw[IPV6_DESTINATION_ADDRESS_SLICE]
-        return IPv6Address(raw_address)
+        return IPv6Address(raw_address), None
 
     if address_type == Socks5AddressType.DOMAIN:
         domain_name = extract_domain_name(raw)
         address = gethostbyname(domain_name)
-        return IPv4Address(address)
+        return IPv4Address(address), domain_name
 
     ipv4 = raw[IPV4_DESTINATION_ADDRESS_SLICE]
-    return IPv4Address(ipv4)
+    return IPv4Address(ipv4), None
 
 
-class RequestModel(RequestBaseModel):
+class RequestModel(RequestBaseModel["RequestModel"]):
     socks_version: SocksVersion
     action: Socks5Command
     address: Union[IPv4Address, IPv6Address]
+    domain: Optional[str] = None
     port: int
     reserved_value: int = 0
 
@@ -99,14 +102,16 @@ class RequestModel(RequestBaseModel):
         return value
 
     @classmethod
-    def loads(
+    def loader(
         cls,
         raw: bytes,
     ) -> "RequestModel":
+        address, domain = extract_address(raw)
         return cls(
             socks_version=extract_socks_version(raw),
             action=extract_action(raw),
-            address=extract_address(raw),
+            address=address,
+            domain=domain,
             port=extract_port(raw),
             reserved_value=extract_reserved_value(raw),
         )
@@ -117,7 +122,7 @@ class ResponseModel(ResponseBaseModel):
     address: Union[IPv4Address, IPv6Address, str]
     port: int
 
-    def dumps(self) -> bytes:
+    def dump(self) -> bytes:
         response = bytes(
             [
                 SocksVersion.SOCKS5.value,
@@ -131,7 +136,5 @@ class ResponseModel(ResponseBaseModel):
             response += bytes([Socks5AddressType.IPV6.value]) + self.address.packed
         if isinstance(self.address, str):
             address_types = Socks5AddressType.DOMAIN
-            response += (
-                bytes([address_types.value, len(self.address)]) + self.address.encode()
-            )
+            response += bytes([address_types.value, len(self.address)]) + self.address.encode()
         return response + int.to_bytes(self.port, PORT_BYTES_LENGTH, PORT_BYTES_ORDER)
