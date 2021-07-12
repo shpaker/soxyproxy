@@ -1,13 +1,8 @@
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Union, Sequence
+from typing import Optional, Sequence, Union
 
-from pydantic import (
-    BaseModel,
-    IPvAnyAddress,
-    IPvAnyNetwork,
-    Field,
-)
+from pydantic import BaseModel, Field, IPvAnyAddress, IPvAnyNetwork
 from yaml import safe_load
 
 
@@ -24,9 +19,7 @@ class ConnectionRule(BaseModel):
 class ProxyRule(BaseModel):
     action: RuleAction
     user: Optional[str] = None
-    from_address: Optional[Union[IPvAnyAddress, IPvAnyNetwork]] = Field(
-        None, alias="from"
-    )
+    from_address: Optional[Union[IPvAnyAddress, IPvAnyNetwork]] = Field(None, alias="from")
     to_address: Optional[Union[IPvAnyAddress, IPvAnyNetwork]] = Field(None, alias="to")
 
 

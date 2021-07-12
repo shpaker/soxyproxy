@@ -1,14 +1,12 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import Union, Optional
+from typing import Optional, Union
 
 from passlib.apache import HtpasswdFile
 from typer import Option, Typer
 
-from soxyproxy.models.ruleset import RuleSet
-from soxyproxy.socks4 import Socks4
-from soxyproxy.socks5 import Socks5
+from soxyproxy import RuleSet, Socks4, Socks5
 
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 1080
@@ -28,7 +26,7 @@ def start_server(
     port: int,
 ) -> None:
     logging.info(f"Start serving {host}:{port}")
-    asyncio.run(proxy.run(host=host, port=port))
+    asyncio.run(proxy.serve(host=host, port=port))
 
 
 @app.command()
@@ -64,7 +62,7 @@ def socks5(
         exists=True,
         dir_okay=False,
         file_okay=True,
-        help="Apache-Like Authentication (htpasswd)",
+        help="Apache-Like Authentication (.htpasswd)",
     ),
     ruleset: Optional[Path] = Option(
         None,
@@ -73,12 +71,12 @@ def socks5(
         file_okay=True,
     ),
 ) -> None:
-    auther = None
+    authers = list()
     ruleset_model = RuleSet.from_file(ruleset) if ruleset else RuleSet()
     if passwords:
         htpasswd = HtpasswdFile(passwords)
-        auther = htpasswd.check_password
-    proxy = Socks5(ruleset=ruleset_model, auther=auther)
+        authers.append(htpasswd.check_password)
+    proxy = Socks5(ruleset=ruleset_model, authers=authers)
     start_server(proxy, host, port)
 
 

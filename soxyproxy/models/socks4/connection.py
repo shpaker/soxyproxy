@@ -2,12 +2,7 @@ from ipaddress import IPv4Address
 
 from pydantic import validator
 
-from soxyproxy.consts import (
-    Socks4Reply,
-    PORT_BYTES_LENGTH,
-    PORT_BYTES_ORDER,
-)
-from soxyproxy.consts import SocksVersion, Socks4Command
+from soxyproxy.consts import PORT_BYTES_LENGTH, PORT_BYTES_ORDER, Socks4Command, Socks4Reply, SocksVersion
 from soxyproxy.models.base import RequestBaseModel, ResponseBaseModel
 
 SOCKS_VERSION_INDEX = 0
@@ -46,7 +41,7 @@ def check_null_terminating_char(raw: bytes) -> None:
         raise ValueError(f"package should be null-terminated: {str(raw)}")
 
 
-class RequestModel(RequestBaseModel):
+class RequestModel(RequestBaseModel["RequestModel"]):
     socks_version: SocksVersion
     command: Socks4Command
     port: int
@@ -62,7 +57,7 @@ class RequestModel(RequestBaseModel):
         return value
 
     @classmethod
-    def loads(
+    def loader(
         cls,
         raw: bytes,
     ) -> "RequestModel":
@@ -82,14 +77,10 @@ class ResponseModel(ResponseBaseModel):
     port: int
     address: IPv4Address
 
-    def dumps(self) -> bytes:
+    def dump(self) -> bytes:
         port_bytes = int.to_bytes(
             self.port,
             PORT_BYTES_LENGTH,
             PORT_BYTES_ORDER,
         )
-        return (
-            bytes([self.reply_version, self.reply.value])
-            + port_bytes
-            + self.address.packed
-        )
+        return bytes([self.reply_version, self.reply.value]) + port_bytes + self.address.packed

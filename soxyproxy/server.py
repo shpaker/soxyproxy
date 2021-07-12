@@ -1,21 +1,14 @@
 from abc import ABC, abstractmethod
-from asyncio import (
-    FIRST_COMPLETED,
-    StreamReader,
-    StreamWriter,
-    Task,
-    create_task,
-    start_server,
-    wait,
-)
+from asyncio import FIRST_COMPLETED, StreamReader, StreamWriter, create_task, start_server, wait
 from logging import getLogger
-from typing import Optional, Tuple, Any
+from typing import Any, Tuple
 
-from soxyproxy.models.client import ClientModel
-from soxyproxy.models.ruleset import RuleSet, RuleAction
-from soxyproxy.utils import check_connection_rules_actions
+from soxyproxy.connections import SocksConnection
+from soxyproxy.exceptions import SocksError
+from soxyproxy.internal.ruleset import raise_for_connection_ruleset
+from soxyproxy.models.ruleset import RuleSet
 
-READ_BYTES_DEFAULT = 1024
+READ_BYTES_DEFAULT = 512
 logger = getLogger(__name__)
 
 
@@ -26,109 +19,71 @@ class ServerBase(ABC):
     ) -> None:
         self.ruleset: RuleSet = ruleset
 
-    async def server_connection_callback(
+    async def _client_connected_cb(
         self,
         client_reader: StreamReader,
         client_writer: StreamWriter,
     ) -> None:
-        client = ClientModel.from_writer(client_writer)
-        matched_rule = check_connection_rules_actions(
-            ruleset=self.ruleset, client=client
-        )
+        client = SocksConnection(reader=client_reader, writer=client_writer)
         try:
-            if matched_rule and matched_rule.action is RuleAction.BLOCK:
-                raise ConnectionError(
-                    f"{client.host} ! connection blocked by rule: {matched_rule.json()}"
-                )
-            await self.serve_client(
-                client_reader=client_reader,
-                client_writer=client_writer,
-            )
-        except ValueError as err:
-            logger.warning(f"{client.host}:{client.port} ! package error: {err}")
-        except ConnectionError as err:
-            logger.warning(f"{client.host}:{client.port} ! connection error: {err}")
-        finally:
-            if not client_writer.is_closing():
-                await client_writer.drain()
-            client_writer.close()
-            logger.info(f"{client.host}:{client.port} close session")
+            raise_for_connection_ruleset(ruleset=self.ruleset, client=client)
+            await self._start_interaction(client=client)
+        except SocksError:
+            pass
 
-    async def run(
+        if not client.writer.is_closing():
+            await client.writer.drain()
+        client.writer.close()
+        logger.info(f"{client} close session")
+
+    async def serve(
         self,
         host: str,
         port: int,
     ) -> None:
         logger.info(f"Start {self.__class__.__name__.lower()} server {host}:{port}")
-        server = await start_server(
-            client_connected_cb=self.server_connection_callback, host=host, port=port
-        )
+        server = await start_server(client_connected_cb=self._client_connected_cb, host=host, port=port)
         async with server:
             await server.serve_forever()
 
     @abstractmethod
-    async def connect(
+    async def proxy_connect(
         self,
-        client_reader: StreamReader,
-        client_writer: StreamWriter,
+        client: SocksConnection,
         **kwargs: Any,
     ) -> Tuple[StreamReader, StreamWriter]:
         raise NotImplementedError
 
-    async def serve_client(
+    async def _start_interaction(
         self,
-        client_reader: StreamReader,
-        client_writer: StreamWriter,
+        client: SocksConnection,
         **kwargs: Any,
     ) -> None:
-        client_host, client_port = client_writer.get_extra_info("peername")
-        remote_reader, remote_writer = await self.connect(
-            client_reader=client_reader,
-            client_writer=client_writer,
-            **kwargs,
-        )
-        remote_host, remote_port = remote_writer.get_extra_info("peername")
-        logger.info(
-            f"{client_host}:{client_port} <-> {remote_host}:{remote_port} session"
-        )
-        await self.proxy(
-            client_reader=client_reader,
-            client_writer=client_writer,
-            remote_reader=remote_reader,
-            remote_writer=remote_writer,
-        )
+        remote_reader, remote_writer = await self.proxy_connect(client=client, **kwargs)
+        remote = SocksConnection(remote_reader, remote_writer)
+        logger.info(f"{client} <-> {remote} start interaction")
 
-    async def proxy(
-        self,
-        client_reader: StreamReader,
-        client_writer: StreamWriter,
-        remote_reader: StreamReader,
-        remote_writer: StreamWriter,
-    ) -> None:
-
-        client_read_task = create_task(client_reader.read(READ_BYTES_DEFAULT))
-        remote_read_task = create_task(remote_reader.read(READ_BYTES_DEFAULT))
+        client_read_task = create_task(client.reader.read(READ_BYTES_DEFAULT))
+        remote_read_task = create_task(remote.reader.read(READ_BYTES_DEFAULT))
 
         while client_read_task is not None and remote_read_task is not None:
 
-            done, _ = await wait(
-                {client_read_task, remote_read_task}, return_when=FIRST_COMPLETED
-            )
+            done, _ = await wait({client_read_task, remote_read_task}, return_when=FIRST_COMPLETED)
 
             if client_read_task in done:
-                client_read_task = await self._proxy_connection(  # type: ignore
+                client_read_task = await self._proxy_connection(
                     in_read=client_read_task,
                     out_read=remote_read_task,
-                    in_reader=client_reader,
-                    out_writer=remote_writer,
+                    in_reader=client.reader,
+                    out_writer=remote.writer,
                 )
 
             if remote_read_task in done:
-                remote_read_task = await self._proxy_connection(  # type: ignore
+                remote_read_task = await self._proxy_connection(
                     in_read=remote_read_task,
                     out_read=client_read_task,
-                    in_reader=remote_reader,
-                    out_writer=client_writer,
+                    in_reader=remote.reader,
+                    out_writer=client.writer,
                 )
 
         if client_read_task:
@@ -137,19 +92,19 @@ class ServerBase(ABC):
         if remote_read_task:
             remote_read_task.cancel()
 
-        remote_writer.close()
+        remote.writer.close()
 
-    async def _proxy_connection(
-        self,
-        in_read: Task,  # type: ignore
-        out_read: Task,  # type: ignore
+    @staticmethod
+    async def _proxy_connection(  # type: ignore
+        in_read,
+        out_read,
         in_reader: StreamReader,
         out_writer: StreamWriter,
-    ) -> Optional[Task]:  # type: ignore
+    ):
         data: bytes = in_read.result()
         if not data:
             out_read.cancel()
             return None
         out_writer.write(data)
         await out_writer.drain()
-        return create_task(in_reader.read(512))
+        return create_task(in_reader.read(READ_BYTES_DEFAULT))

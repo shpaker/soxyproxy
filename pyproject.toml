@@ -1,5 +1,5 @@
 [tool.black]
-line-length = 88
+line-length = 120
 verbose = 1
 color = true
 exclude = '''
@@ -29,9 +29,9 @@ disable = "missing-docstring,logging-fstring-interpolation,too-few-public-method
 extend-ignore = "E203,W503"
 
 [tool.pylint.format]
-max-line-length = "88"
+max-line-length = "120"
 indent-string = "    "
-good-names = "i, x, y"
+good-names = "i, x, y, T"
 
 [tool.pylint.master]
 ignore = "venv,tests"
@@ -40,7 +40,7 @@ extension-pkg-whitelist = "pydantic"
 
 [tool.poetry]
 name = "soxyproxy"
-version = "0.5.0"
+version = "0.6.0"
 description = "Pure Python SOCKS proxy server implementation"
 authors = ["Aleksandr Shpak <shpaker@gmail.com>"]
 readme = "readme.md"

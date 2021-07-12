@@ -35,7 +35,7 @@ def extract_password(raw: bytes) -> str:
     return password.decode()
 
 
-class RequestModel(RequestBaseModel):
+class RequestModel(RequestBaseModel["RequestModel"]):
     username_auth_version: int
     username: str
     password: str
@@ -50,7 +50,7 @@ class RequestModel(RequestBaseModel):
         return value
 
     @classmethod
-    def loads(
+    def loader(
         cls,
         raw: bytes,
     ) -> "RequestModel":
@@ -64,8 +64,6 @@ class RequestModel(RequestBaseModel):
 class ResponseModel(ResponseBaseModel):
     status: bool
 
-    def dumps(self) -> bytes:
-        auth_status: Socks5AuthReply = (
-            Socks5AuthReply.SUCCESS if self.status else Socks5AuthReply.FAIL
-        )
+    def dump(self) -> bytes:
+        auth_status: Socks5AuthReply = Socks5AuthReply.SUCCESS if self.status else Socks5AuthReply.FAIL
         return bytes([SOCKS5_USERNAME_AUTH_VERSION, auth_status.value])

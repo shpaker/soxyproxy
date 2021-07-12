@@ -1,4 +1,4 @@
-from enum import unique, IntEnum, Enum
+from enum import Enum, IntEnum, unique
 
 PORT_BYTES_LENGTH = 2
 PORT_BYTES_ORDER = "big"
