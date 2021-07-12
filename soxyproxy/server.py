@@ -8,7 +8,7 @@ from soxyproxy.exceptions import SocksError
 from soxyproxy.internal.ruleset import raise_for_connection_ruleset
 from soxyproxy.models.ruleset import RuleSet
 
-READ_BYTES_DEFAULT = 1024
+READ_BYTES_DEFAULT = 512
 logger = getLogger(__name__)
 
 
@@ -19,7 +19,7 @@ class ServerBase(ABC):
     ) -> None:
         self.ruleset: RuleSet = ruleset
 
-    async def _server_connection_callback(
+    async def _client_connected_cb(
         self,
         client_reader: StreamReader,
         client_writer: StreamWriter,
@@ -27,7 +27,7 @@ class ServerBase(ABC):
         client = SocksConnection(reader=client_reader, writer=client_writer)
         try:
             raise_for_connection_ruleset(ruleset=self.ruleset, client=client)
-            await self.proxy_serve(client=client)
+            await self._start_interaction(client=client)
         except SocksError:
             pass
 
@@ -42,7 +42,7 @@ class ServerBase(ABC):
         port: int,
     ) -> None:
         logger.info(f"Start {self.__class__.__name__.lower()} server {host}:{port}")
-        server = await start_server(client_connected_cb=self._server_connection_callback, host=host, port=port)
+        server = await start_server(client_connected_cb=self._client_connected_cb, host=host, port=port)
         async with server:
             await server.serve_forever()
 
@@ -54,7 +54,7 @@ class ServerBase(ABC):
     ) -> Tuple[StreamReader, StreamWriter]:
         raise NotImplementedError
 
-    async def proxy_serve(
+    async def _start_interaction(
         self,
         client: SocksConnection,
         **kwargs: Any,
@@ -62,16 +62,6 @@ class ServerBase(ABC):
         remote_reader, remote_writer = await self.proxy_connect(client=client, **kwargs)
         remote = SocksConnection(remote_reader, remote_writer)
         logger.info(f"{client} <-> {remote} start interaction")
-        await self._proxy_interaction(
-            client=client,
-            remote=remote,
-        )
-
-    async def _proxy_interaction(
-        self,
-        client: SocksConnection,
-        remote: SocksConnection,
-    ) -> None:
 
         client_read_task = create_task(client.reader.read(READ_BYTES_DEFAULT))
         remote_read_task = create_task(remote.reader.read(READ_BYTES_DEFAULT))
@@ -117,4 +107,4 @@ class ServerBase(ABC):
             return None
         out_writer.write(data)
         await out_writer.drain()
-        return create_task(in_reader.read(512))
+        return create_task(in_reader.read(READ_BYTES_DEFAULT))

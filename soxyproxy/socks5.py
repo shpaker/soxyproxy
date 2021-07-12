@@ -107,14 +107,14 @@ class Socks5(ServerBase):
 
         return remote_reader, remote_writer
 
-    async def proxy_serve(
+    async def _start_interaction(
         self,
         client: SocksConnection,
         **kwargs: Any,
     ) -> None:
         await self.proxy_handshake(client=client)
         auth_request = await self.proxy_auth(client=client)
-        await super().proxy_serve(client=client, auth_request=auth_request)
+        await super()._start_interaction(client=client, auth_request=auth_request)
 
     @staticmethod
     async def _open_remote_connection(
