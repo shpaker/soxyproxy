@@ -1,12 +1,11 @@
 from logging import getLogger
 from typing import Optional
 
-from soxyproxy import RuleSet
 from soxyproxy.connections import SocksConnection
 from soxyproxy.consts import Socks5ConnectionReply
 from soxyproxy.exceptions import SocksRulesetError
 from soxyproxy.internal.ruleset import check_proxy_rules
-from soxyproxy.models.ruleset import RuleAction
+from soxyproxy.models.ruleset import RuleAction, RuleSet
 from soxyproxy.models.socks5 import connection
 
 logger = getLogger(__name__)
