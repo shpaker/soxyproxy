@@ -28,7 +28,7 @@ class ServerBase(ABC):
         try:
             raise_for_connection_ruleset(ruleset=self.ruleset, client=client)
             await self._start_interaction(client=client)
-        except SocksError:
+        except (SocksError, ConnectionError):
             pass
 
         if not client.writer.is_closing():
