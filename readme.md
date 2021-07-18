@@ -4,6 +4,7 @@
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/shpaker/soxyproxy.svg?logo=lgtm)](https://lgtm.com/projects/g/shpaker/soxyproxy/context:python)
 [![Test](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
+---
 
 ## Getting Started
 
