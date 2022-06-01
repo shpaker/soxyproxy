@@ -56,7 +56,7 @@ PyYAML = "^5.4.1"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.9.2"
-httpx = "^0.18.2"
+httpx = "^0.23.0"
 httpx-socks = {extras = ["asyncio"], version = "^0.4.1"}
 mypy = "^0.910"
 pre-commit = "^2.13.0"
