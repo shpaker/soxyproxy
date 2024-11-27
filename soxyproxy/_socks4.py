@@ -124,7 +124,7 @@ class Socks4(
             command = Socks4Command(raw_command)
         except ValueError as exc:
             raise SocksPackageError(data) from exc
-        return command, Destination(host=address, port=port)
+        return command, Destination(address=address, port=port)
 
 
 class Socks4A(
@@ -148,7 +148,7 @@ class Socks4A(
             command = Socks4Command(raw_command)
         except ValueError as exc:
             raise SocksPackageError(data) from exc
-        destination = Destination(host=zero_address, port=port)
+        destination = Destination(address=zero_address, port=port)
         if not (0 < raw_address <= 0xFF):
             raise await self.reject(client, destination)
         try:
@@ -159,4 +159,4 @@ class Socks4A(
             address = resolve_host(domain)
         except gaierror as exc:
             raise await self.reject(client, destination) from exc
-        return command, Destination(host=IPv4Address(address), port=port)
+        return command, Destination(address=IPv4Address(address), port=port)

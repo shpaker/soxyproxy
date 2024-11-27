@@ -22,13 +22,13 @@ async def test_aa_ok() -> None:
     class _FakeConn(Connection):
         write = write_mock
 
-    results = await Socks4A().__call__(
+    results = await Socks4A()(
         _FakeConn(),
         data=b"\x04\x01\x01\xbb\x00\x00\x00\x01\x00google.com\x00",
     )
 
     assert results == Destination(
-        host=IPv4Address("216.58.207.206"),
+        address=IPv4Address("142.250.74.46"),
         port=443,
     )
     write_mock.assert_called_once()
@@ -41,13 +41,13 @@ async def test_ok() -> None:
     class _FakeConn(Connection):
         write = write_mock
 
-    results = await socks.__call__(
+    results = await socks(
         _FakeConn(),
         data=b"\x04\x01\x01\xbb\x8e\xfaJ.\x00",
     )
 
     assert results == Destination(
-        host=IPv4Address("142.250.74.46"),
+        address=IPv4Address("142.250.74.46"),
         port=443,
     )
     write_mock.assert_called_once()
@@ -100,7 +100,7 @@ async def test_error(
         write = write_mock
 
     with pytest.raises(exception):
-        await socks.__call__(
+        await socks(
             _FakeConn(),
             data=data,
         )
