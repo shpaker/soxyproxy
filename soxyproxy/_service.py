@@ -3,12 +3,12 @@ from datetime import datetime
 from traceback import print_exc
 
 from soxyproxy._errors import (
-    SocksIncorrectVersionError,
-    SocksPackageError,
-    SocksRejectError,
+    PackageError,
+    ProtocolError,
+    RejectError,
 )
 from soxyproxy._logger import logger
-from soxyproxy._types import Connection, Destination, ProxySocks, Status
+from soxyproxy._types import Connection, Destination, ProxySocks
 
 
 class ProxyService:
@@ -18,21 +18,23 @@ class ProxyService:
     ) -> None:
         self._protocol = protocol
 
-    async def on_target_open(
+    async def on_remote_open(
         self,
         client: Connection,
         dest: Destination,
-    ):
+    ) -> None:
+        logger.info(f"{client} remote connection {dest.address}:{dest.port} opened")
         await self._protocol.success(
             client=client,
             destination=dest,
         )
 
-    async def on_target_unreachable(
+    async def on_remote_unreachable(
         self,
         client: Connection,
         dest: Destination,
-    ):
+    ) -> None:
+        logger.info(f"{client} remote {dest.address}:{dest.port} unreachable")
         await self._protocol.target_unreachable(
             client=client,
             destination=dest,
@@ -42,13 +44,12 @@ class ProxyService:
         self,
         client: Connection,
     ) -> Destination | None:
+        logger.info(f"{client} client connected")
         if not (data := await client.read()):
             return None
         try:
             return await self._protocol(client, data)
-        except (SocksIncorrectVersionError, SocksPackageError):
-            return None
-        except SocksRejectError:
+        except (PackageError, ProtocolError, RejectError, IndexError):
             return None
 
     @staticmethod
@@ -56,7 +57,6 @@ class ProxyService:
         client: Connection,
         target: Connection,
     ) -> None:
-        client.status = Status.MESSAGING
         tasks: dict[Connection, asyncio.Task] = {
             client: asyncio.create_task(client.read()),
             target: asyncio.create_task(target.read()),
@@ -64,7 +64,7 @@ class ProxyService:
         conns = set(tasks.keys())
         closed = False
         started_at = datetime.now()
-        logger.info(f'START MESSAGING {client} -> {target}')
+        logger.info(f"{client} start messaging with {target}")
         while not closed:
             try:
                 done, _ = await asyncio.wait(
@@ -85,13 +85,12 @@ class ProxyService:
                 tasks[conn] = asyncio.create_task(conn.read())
                 await another.write(data)
                 if conn is client:
-                    logger.info(f'{client} -> {len(data)} bytes -> {target}')
+                    logger.info(f"{client} -> {len(data)} bytes -> {target}")
                 else:
-                    logger.info(f'{client} <- {len(data)} bytes <- {target}')
-        logger.info(
-            f'STOP MESSAGING {client} -> {target} (duration {datetime.now() - started_at})'
-        )
+                    logger.info(f"{client} <- {len(data)} bytes <- {target}")
         for task in tasks.values():
             if not task.cancelled():
                 task.cancel()
-        client.status = Status.CLOSED
+        logger.info(
+            f"{client} stop messaging with {target} (duration {datetime.now() - started_at})"
+        )

@@ -2,6 +2,10 @@ import enum
 import typing as tp
 from ipaddress import IPv4Address, IPv6Address
 
+DomainNameResolver = tp.Callable[[str], IPv4Address | tp.Awaitable[IPv4Address]]
+Socks4Auther = tp.Callable[[str], bool | tp.Awaitable[bool]]
+Socks5Auther = tp.Callable[[str, str], bool | tp.Awaitable[bool]]
+
 
 class SocksVersions(enum.IntEnum):
     SOCKS4 = 4
@@ -11,11 +15,6 @@ class SocksVersions(enum.IntEnum):
 class Status(enum.Enum):
     CLIENT = enum.auto()
     REMOTE = enum.auto()
-
-    APPROVED = enum.auto()
-    MESSAGING = enum.auto()
-    REJECTED = enum.auto()
-    CLOSED = enum.auto()
 
 
 class Socks4Command(enum.IntEnum):
@@ -69,7 +68,7 @@ class Socks5ConnectionReply(enum.IntEnum):
 
 
 class Destination(tp.NamedTuple):
-    address: str | IPv4Address | IPv6Address
+    address: IPv4Address | IPv6Address
     port: int
 
 

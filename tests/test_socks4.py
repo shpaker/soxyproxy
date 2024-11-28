@@ -6,9 +6,9 @@ import pytest
 from soxyproxy import (
     Destination,
     SocksIncorrectVersionError,
-    SocksPackageError,
+    PackageError,
     Socks4A,
-    SocksRejectError,
+    RejectError,
 )
 from soxyproxy import Socks4, Connection
 
@@ -65,25 +65,25 @@ async def test_ok() -> None:
         ),
         pytest.param(
             b"\x05\x01\x01\xbb\x8e\xfaJ.\x00\x05\x01\x01\xbb\x8e\xfaJ.\x00",
-            SocksPackageError,
+            PackageError,
             False,
             id="too large",
         ),
         pytest.param(
             b"\x04\x01\x01\xbb\x8e\xfaJ.\x01",
-            SocksPackageError,
+            PackageError,
             False,
             id="reserved not null",
         ),
         pytest.param(
             b"\x04\x00\x01\xbb\x8e\xfaJ.\x00",
-            SocksPackageError,
+            PackageError,
             False,
             id="unknown command",
         ),
         pytest.param(
             b"\x04\x02\x01\xbb\x8e\xfaJ.\x00",
-            SocksRejectError,
+            RejectError,
             True,
             id="bind command",
         ),

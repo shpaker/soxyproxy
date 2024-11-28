@@ -1,25 +1,31 @@
 from abc import ABC, abstractmethod
 
 from soxyproxy._errors import (
-    Destination,
-    SocksRejectError,
+    RejectError,
 )
 from soxyproxy._types import (
     Connection,
-    ProxySocks,
+    Destination,
+    DomainNameResolver,
 )
 
 
 class BaseSocks(
     ABC,
-    ProxySocks,
+    # ProxySocks,
 ):
+    def __init__(
+        self,
+        domain_names_resolver: DomainNameResolver | None = None,
+    ) -> None:
+        self._domain_names_resolver = domain_names_resolver
+
     @abstractmethod
     async def success(
         self,
         client: Connection,
         destination: Destination,
-    ) -> SocksRejectError:
+    ) -> RejectError:
         pass
 
     @abstractmethod
@@ -27,7 +33,7 @@ class BaseSocks(
         self,
         client: Connection,
         destination: Destination,
-    ) -> SocksRejectError:
+    ) -> RejectError:
         pass
 
     @abstractmethod

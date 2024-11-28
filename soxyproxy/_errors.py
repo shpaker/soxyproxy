@@ -1,8 +1,15 @@
-from soxyproxy._types import Destination
+from ipaddress import IPv4Address, IPv6Address
 
 
-class SocksPackageError(ValueError):
-    def __init__(self, data: bytes, *args, **kwargs) -> None:
+class PackageError(
+    ValueError,
+):
+    def __init__(
+        self,
+        data: bytes,
+        *args,
+        **kwargs,
+    ) -> None:
         self._data = data
         super().__init__(*args, **kwargs)
 
@@ -11,21 +18,59 @@ class SocksPackageError(ValueError):
         return self._data
 
 
-class SocksIncorrectVersionError(SocksPackageError):
+class ProtocolError(
+    Exception,
+):
     pass
 
 
-class SocksError(Exception):
-    pass
-
-
-class SocksRejectError(SocksError):
+class ResolveDomainError(
+    ProtocolError,
+):
     def __init__(
         self,
-        destination: Destination,
+        domain: str,
     ) -> None:
-        self._destination = destination
+        self._domain = domain
 
     @property
-    def destination(self):
-        return self._destination
+    def domain(self):
+        return self._domain
+
+
+class AuthorizationError(
+    ProtocolError,
+):
+    def __init__(
+        self,
+        username: str,
+    ) -> None:
+        self._username = username
+
+    @property
+    def username(self):
+        return self._username
+
+
+class RejectError(
+    ProtocolError,
+):
+    def __init__(
+        self,
+        address: str | IPv4Address | IPv6Address,
+        port: int,
+    ) -> None:
+        self._address = address
+        self._port = port
+
+    @property
+    def address(
+        self,
+    ) -> str | IPv4Address | IPv6Address:
+        return self._address
+
+    @property
+    def port(
+        self,
+    ) -> int:
+        return self._port

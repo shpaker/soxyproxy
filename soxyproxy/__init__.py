@@ -1,13 +1,14 @@
 from soxyproxy._errors import (
-    SocksError,
-    SocksIncorrectVersionError,
-    SocksPackageError,
-    SocksRejectError,
+    ProtocolError,
+    PackageError,
+    RejectError,
+    ResolveDomainError,
+    AuthorizationError,
 )
 from soxyproxy._service import ProxyService
-from soxyproxy._socks4 import Socks4, Socks4A
+from soxyproxy._socks4 import Socks4
 from soxyproxy._socks5 import Socks5
-from soxyproxy._transports import TcpTransport
+from soxyproxy._tcp import TcpServer
 from soxyproxy._types import (
     Connection,
     Destination,
@@ -16,21 +17,21 @@ from soxyproxy._types import (
 )
 
 __all__ = [
-    'Connection',
-    'Destination',
-    'ProxyService',
+    "Connection",
+    "Destination",
+    "ProxyService",
     # types
-    'ProxySocks',
-    'ProxyTransport',
+    "ProxySocks",
+    "ProxyTransport",
     # protocol implementations
-    'Socks4',
-    'Socks4A',
-    'Socks5',
-    'SocksError',
+    "Socks4",
+    "Socks5",
     # errors
-    'SocksIncorrectVersionError',
-    'SocksPackageError',
-    'SocksRejectError',
+    "ProtocolError",
+    "ResolveDomainError",
+    "PackageError",
+    "RejectError",
+    "AuthorizationError",
     # transports
-    'TcpTransport',
+    "TcpServer",
 ]
