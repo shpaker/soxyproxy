@@ -2,9 +2,7 @@ import enum
 import typing as tp
 from ipaddress import IPv4Address, IPv6Address
 
-DomainNameResolver = tp.Callable[
-    [str], IPv4Address | tp.Awaitable[IPv4Address]
-]
+Resolver = tp.Callable[[str], IPv4Address | tp.Awaitable[IPv4Address]]
 Socks4Auther = tp.Callable[[str], bool | tp.Awaitable[bool]]
 Socks5Auther = tp.Callable[[str, str], bool | tp.Awaitable[bool]]
 
@@ -88,12 +86,8 @@ class ProxyTransport(tp.Protocol):
 
 
 class ProxySocks(tp.Protocol):
-    async def __call__(
-        self, client: Connection, data: bytes
-    ) -> Destination: ...
-    async def success(
-        self, client: Connection, destination: Destination
-    ) -> None: ...
+    async def __call__(self, client: Connection, data: bytes) -> Destination: ...
+    async def success(self, client: Connection, destination: Destination) -> None: ...
     async def target_unreachable(
         self, client: Connection, destination: Destination
     ) -> None: ...

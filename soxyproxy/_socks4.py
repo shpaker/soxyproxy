@@ -12,7 +12,7 @@ from soxyproxy._logger import logger
 from soxyproxy._types import (
     Connection,
     Destination,
-    DomainNameResolver,
+    Resolver,
     Socks4Auther,
     Socks4Command,
     Socks4Reply,
@@ -32,11 +32,11 @@ class Socks4(
     def __init__(
         self,
         auther: Socks4Auther | None = None,
-        domain_names_resolver: DomainNameResolver | None = None,
+        resolver: Resolver | None = None,
     ) -> None:
         self._auther = auther
         super().__init__(
-            domain_names_resolver=domain_names_resolver,
+            resolver=resolver,
         )
 
     async def send(
@@ -49,7 +49,7 @@ class Socks4(
         await client.write(
             bytes([0, reply.value]) + port_to_bytes(port) + address.packed
         )
-        logger.info(f'{client} SOCKS4 response: {reply.name}')
+        logger.info(f"{client} SOCKS4 response: {reply.name}")
 
     async def reject(
         self,
@@ -138,11 +138,11 @@ class Socks4(
                 address=address,
                 port=port,
             )
-        if not self._domain_names_resolver and domain:
+        if not self._resolver and domain:
             raise await self.reject(client)
         try:
             resolved = await call_domain_names_resolver(
-                self._domain_names_resolver,
+                self._resolver,
                 name=domain,
             )
         except ResolveDomainError as exc:
@@ -164,7 +164,7 @@ class Socks4(
         data: bytes,
     ) -> tuple[IPv4Address, int]:
         try:
-            port, raw_address = struct.unpack('!HI', data[2:8])
+            port, raw_address = struct.unpack("!HI", data[2:8])
         except (struct.error, IndexError) as exc:
             raise await self.reject(client) from exc
         return IPv4Address(raw_address), port
@@ -177,9 +177,9 @@ class Socks4(
         address: IPv4Address,
         port: int,
     ) -> tuple[str | None, str | None]:
-        if b'\x00' in data:
+        if b"\x00" in data:
             try:
-                username_bytes, domain_bytes = data[8:-1].split(b'\x00')
+                username_bytes, domain_bytes = data[8:-1].split(b"\x00")
             except (ValueError, IndexError) as exc:
                 raise await self.reject(
                     client,

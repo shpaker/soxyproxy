@@ -19,7 +19,7 @@ async def test_resolver_ok() -> None:
     class _FakeConn(Connection): ...
 
     socks = Socks4(
-        domain_names_resolver=lambda value: IPv4Address("1.1.1.1"),
+        resolver=lambda value: IPv4Address("1.1.1.1"),
     )
     results = await socks(
         _FakeConn(),
@@ -39,7 +39,7 @@ async def test_resolver_fail() -> None:
         raise ResolveDomainError
 
     socks = Socks4(
-        domain_names_resolver=resolver,
+        resolver=resolver,
     )
     with pytest.raises(RejectError):
         await socks(
