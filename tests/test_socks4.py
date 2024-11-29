@@ -5,10 +5,9 @@ import pytest
 
 from soxyproxy import (
     Destination,
-    SocksIncorrectVersionError,
     PackageError,
-    Socks4A,
     RejectError,
+    ResolveDomainError,
 )
 from soxyproxy import Socks4, Connection
 
@@ -16,22 +15,37 @@ socks = Socks4()
 
 
 @pytest.mark.asyncio
-async def test_aa_ok() -> None:
-    write_mock = AsyncMock()
+async def test_resolver_ok() -> None:
+    class _FakeConn(Connection): ...
 
-    class _FakeConn(Connection):
-        write = write_mock
-
-    results = await Socks4A()(
+    socks = Socks4(
+        domain_names_resolver=lambda value: IPv4Address("1.1.1.1"),
+    )
+    results = await socks(
         _FakeConn(),
         data=b"\x04\x01\x01\xbb\x00\x00\x00\x01\x00google.com\x00",
     )
-
     assert results == Destination(
-        address=IPv4Address("142.250.74.46"),
+        address=IPv4Address("1.1.1.1"),
         port=443,
     )
-    write_mock.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_resolver_fail() -> None:
+    class _FakeConn(Connection): ...
+
+    def resolver(name: str) -> None:
+        raise ResolveDomainError
+
+    socks = Socks4(
+        domain_names_resolver=resolver,
+    )
+    with pytest.raises(RejectError):
+        await socks(
+            _FakeConn(),
+            data=b"\x04\x01\x01\xbb\x00\x00\x00\x01\x00google.com\x00",
+        )
 
 
 @pytest.mark.asyncio
@@ -45,12 +59,10 @@ async def test_ok() -> None:
         _FakeConn(),
         data=b"\x04\x01\x01\xbb\x8e\xfaJ.\x00",
     )
-
     assert results == Destination(
         address=IPv4Address("142.250.74.46"),
         port=443,
     )
-    write_mock.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -59,7 +71,7 @@ async def test_ok() -> None:
     [
         pytest.param(
             b"\x05\x01\x01\xbb\x8e\xfaJ.\x00",
-            SocksIncorrectVersionError,
+            PackageError,
             False,
             id="incorrect version",
         ),
@@ -77,8 +89,8 @@ async def test_ok() -> None:
         ),
         pytest.param(
             b"\x04\x00\x01\xbb\x8e\xfaJ.\x00",
-            PackageError,
-            False,
+            RejectError,
+            True,
             id="unknown command",
         ),
         pytest.param(

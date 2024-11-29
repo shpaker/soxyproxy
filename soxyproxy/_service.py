@@ -23,7 +23,9 @@ class ProxyService:
         client: Connection,
         dest: Destination,
     ) -> None:
-        logger.info(f"{client} remote connection {dest.address}:{dest.port} opened")
+        logger.info(
+            f'{client} remote connection {dest.address}:{dest.port} opened'
+        )
         await self._protocol.success(
             client=client,
             destination=dest,
@@ -34,7 +36,7 @@ class ProxyService:
         client: Connection,
         dest: Destination,
     ) -> None:
-        logger.info(f"{client} remote {dest.address}:{dest.port} unreachable")
+        logger.info(f'{client} remote {dest.address}:{dest.port} unreachable')
         await self._protocol.target_unreachable(
             client=client,
             destination=dest,
@@ -44,7 +46,7 @@ class ProxyService:
         self,
         client: Connection,
     ) -> Destination | None:
-        logger.info(f"{client} client connected")
+        logger.info(f'{client} client connected')
         if not (data := await client.read()):
             return None
         try:
@@ -64,7 +66,7 @@ class ProxyService:
         conns = set(tasks.keys())
         closed = False
         started_at = datetime.now()
-        logger.info(f"{client} start messaging with {target}")
+        logger.info(f'{client} start messaging with {target}')
         while not closed:
             try:
                 done, _ = await asyncio.wait(
@@ -85,12 +87,12 @@ class ProxyService:
                 tasks[conn] = asyncio.create_task(conn.read())
                 await another.write(data)
                 if conn is client:
-                    logger.info(f"{client} -> {len(data)} bytes -> {target}")
+                    logger.info(f'{client} -> {len(data)} bytes -> {target}')
                 else:
-                    logger.info(f"{client} <- {len(data)} bytes <- {target}")
+                    logger.info(f'{client} <- {len(data)} bytes <- {target}')
         for task in tasks.values():
             if not task.cancelled():
                 task.cancel()
         logger.info(
-            f"{client} stop messaging with {target} (duration {datetime.now() - started_at})"
+            f'{client} stop messaging with {target} (duration {datetime.now() - started_at})'
         )

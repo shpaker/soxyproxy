@@ -1,9 +1,8 @@
 import asyncio
 from typing import Self
 
-from soxyproxy._logger import logger
 from soxyproxy._service import ProxyService
-from soxyproxy._types import ProxyTransport, Connection
+from soxyproxy._types import Connection, ProxyTransport
 
 
 class TCPConnection(
@@ -18,8 +17,8 @@ class TCPConnection(
         self._writer = writer
 
     def __repr__(self) -> str:
-        host, port = self._writer.get_extra_info("peername")
-        return f"<Connection {host}:{port}>"
+        host, port = self._writer.get_extra_info('peername')
+        return f'<Connection {host}:{port}>'
 
     async def __aenter__(self):
         return self
@@ -35,8 +34,7 @@ class TCPConnection(
         port: int,
     ) -> Self:
         reader, writer = await asyncio.open_connection(host, port)
-        conn = cls(reader, writer)
-        return conn
+        return cls(reader, writer)
 
     async def read(
         self,
@@ -57,7 +55,7 @@ class TcpServer(
     def __init__(
         self,
         proxy: ProxyService,
-        host: str = "127.0.0.1",
+        host: str = '127.0.0.1',
         port: int = 1080,
     ) -> None:
         self._service = proxy
@@ -74,7 +72,7 @@ class TcpServer(
         pass
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}>"
+        return f'<{self.__class__.__name__}>'
 
     async def _client_cb(
         self,

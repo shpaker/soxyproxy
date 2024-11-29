@@ -2,29 +2,29 @@ from asyncio import iscoroutine
 from ipaddress import IPv4Address
 
 from soxyproxy._errors import (
+    AuthorizationError,
     PackageError,
     ResolveDomainError,
-    AuthorizationError,
 )
 from soxyproxy._logger import logger
 from soxyproxy._types import (
-    SocksVersions,
     DomainNameResolver,
     Socks4Auther,
     Socks5Auther,
+    SocksVersions,
 )
 
 
 def port_from_bytes(
     data: bytes,
 ) -> int:
-    return int.from_bytes(data, byteorder="big")
+    return int.from_bytes(data, byteorder='big')
 
 
 def port_to_bytes(
     data: int,
 ) -> bytes:
-    return int.to_bytes(data, 2, byteorder="big")
+    return int.to_bytes(data, 2, byteorder='big')
 
 
 def check_protocol_version(
@@ -45,12 +45,12 @@ async def call_domain_names_resolver(
         result = resolver(name)
         if iscoroutine(result):
             result = await result
-    except Exception as exc:
+    except Exception:  # noqa: BLE001
         result = False
     message = (
-        f"fail to resolve {name}"
+        f'fail to resolve {name}'
         if not result
-        else f"host {name} was resolved: IPv4 {result}"
+        else f'host {name} was resolved: IPv4 {result}'
     )
     logger.info(message)
     if not result:
@@ -66,10 +66,12 @@ async def call_user_auther(
         result = auther(username)
         if iscoroutine(result):
             result = await result
-    except Exception:
+    except Exception:  # noqa: BLE001
         result = False
     message = (
-        f"fail to authorize {username}" if not result else f"{username} authorized"
+        f'fail to authorize {username}'
+        if not result
+        else f'{username} authorized'
     )
     logger.info(message)
     if not result:
@@ -86,10 +88,12 @@ async def call_user_pass_auther(
         result = auther(username, password)
         if iscoroutine(result):
             result = await result
-    except Exception:
+    except Exception:  # noqa: BLE001
         result = False
     message = (
-        f"fail to authorize {username}" if not result else f"{username} authorized"
+        f'fail to authorize {username}'
+        if not result
+        else f'{username} authorized'
     )
     logger.info(message)
     if not result:
