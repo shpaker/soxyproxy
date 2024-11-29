@@ -1,6 +1,8 @@
 from asyncio import iscoroutine
 from ipaddress import IPv4Address
+from typing import get_args
 
+from soxyproxy import Destination
 from soxyproxy._errors import (
     AuthorizationError,
     PackageError,
@@ -8,6 +10,7 @@ from soxyproxy._errors import (
 )
 from soxyproxy._logger import logger
 from soxyproxy._types import (
+    IPvAnyAddress,
     Resolver,
     Socks4Auther,
     Socks5Auther,
@@ -18,13 +21,13 @@ from soxyproxy._types import (
 def port_from_bytes(
     data: bytes,
 ) -> int:
-    return int.from_bytes(data, byteorder="big")
+    return int.from_bytes(data, byteorder='big')
 
 
 def port_to_bytes(
     data: int,
 ) -> bytes:
-    return int.to_bytes(data, 2, byteorder="big")
+    return int.to_bytes(data, 2, byteorder='big')
 
 
 def check_protocol_version(
@@ -37,7 +40,7 @@ def check_protocol_version(
         raise PackageError(data)
 
 
-async def call_domain_names_resolver(
+async def call_resolver(
     resolver: Resolver,
     name: str,
 ) -> IPv4Address:
@@ -45,12 +48,12 @@ async def call_domain_names_resolver(
         result = resolver(name)
         if iscoroutine(result):
             result = await result
-    except Exception:  # noqa: BLE001
-        result = False
+    except Exception as exc:
+        raise ResolveDomainError(name) from exc
     message = (
-        f"fail to resolve {name}"
+        f'fail to resolve {name}'
         if not result
-        else f"host {name} was resolved: IPv4 {result}"
+        else f'host {name} was resolved: IPv4 {result}'
     )
     logger.info(message)
     if not result:
@@ -61,37 +64,36 @@ async def call_domain_names_resolver(
 async def call_user_auther(
     auther: Socks4Auther,
     username: str,
-) -> bool:
+) -> None:
     try:
         result = auther(username)
         if iscoroutine(result):
             result = await result
     except Exception:  # noqa: BLE001
         result = False
-    message = (
-        f"fail to authorize {username}" if not result else f"{username} authorized"
-    )
-    logger.info(message)
     if not result:
         raise AuthorizationError(username)
-    return result
 
 
 async def call_user_pass_auther(
     auther: Socks5Auther,
     username: str,
     password: str,
-) -> bool:
+) -> None:
     try:
         result = auther(username, password)
         if iscoroutine(result):
             result = await result
     except Exception:  # noqa: BLE001
         result = False
-    message = (
-        f"fail to authorize {username}" if not result else f"{username} authorized"
-    )
-    logger.info(message)
     if not result:
         raise AuthorizationError(username)
-    return result
+
+
+def match_destination(
+    destination: Destination,
+    math_with: IPvAnyAddress | IPvAnyAddress,
+) -> bool:
+    if isinstance(math_with, get_args(IPvAnyAddress.__value__)):
+        return destination.address == math_with
+    return destination.address in math_with

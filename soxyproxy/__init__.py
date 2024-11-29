@@ -14,6 +14,8 @@ from soxyproxy._types import (
     Destination,
     ProxySocks,
     ProxyTransport,
+    Rule,
+    RuleSet,
 )
 
 __all__ = [
@@ -29,6 +31,8 @@ __all__ = [
     'ProxyTransport',
     'RejectError',
     'ResolveDomainError',
+    'Rule',
+    'RuleSet',
     # protocol implementations
     'Socks4',
     'Socks5',

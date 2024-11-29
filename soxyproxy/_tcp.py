@@ -1,6 +1,7 @@
 import asyncio
 from typing import Self
 
+from soxyproxy import Destination, RejectError
 from soxyproxy._service import ProxyService
 from soxyproxy._types import Connection, ProxyTransport
 
@@ -15,10 +16,22 @@ class TCPConnection(
     ) -> None:
         self._reader = reader
         self._writer = writer
+        address, port = self._writer.get_extra_info('peername')
+        self._destination = Destination(
+            address=address,
+            port=port,
+        )
+
+    @property
+    def destination(
+        self,
+    ) -> Destination:
+        return self._destination
 
     def __repr__(self) -> str:
-        host, port = self._writer.get_extra_info('peername')
-        return f'<Connection {host}:{port}>'
+        return (
+            f'<Connection {self.destination.address}:{self.destination.port}>'
+        )
 
     async def __aenter__(self):
         return self
@@ -81,15 +94,33 @@ class TcpServer(
     ) -> None:
         async with TCPConnection(reader, writer) as client:
             if not (
-                destination := await self._service.on_client_connect(client)
+                destination := await self._service.on_client_connect(
+                    client=client,
+                )
             ) or isinstance(destination.address, str):
+                return
+            try:
+                await self._service.before_remote_open(
+                    client=client,
+                    destination=destination,
+                )
+            except RejectError:
                 return
             try:
                 async with await TCPConnection.open(
                     host=str(destination.address),
                     port=destination.port,
-                ) as target:
-                    await self._service.on_remote_open(client, destination)
-                    await self._service.start_messaging(client, target)
+                ) as remote:
+                    await self._service.on_remote_open(
+                        client=client,
+                        remote=remote,
+                    )
+                    await self._service.start_messaging(
+                        client=client,
+                        remote=remote,
+                    )
             except ConnectionError:
-                await self._service.on_remote_unreachable(client, destination)
+                await self._service.on_remote_unreachable(
+                    client=client,
+                    destination=destination,
+                )
