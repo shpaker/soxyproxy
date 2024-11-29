@@ -2,7 +2,6 @@ from asyncio import iscoroutine
 from ipaddress import IPv4Address
 from typing import get_args
 
-from soxyproxy import Destination
 from soxyproxy._errors import (
     AuthorizationError,
     PackageError,
@@ -10,6 +9,7 @@ from soxyproxy._errors import (
 )
 from soxyproxy._logger import logger
 from soxyproxy._types import (
+    Destination,
     IPvAnyAddress,
     Resolver,
     Socks4Auther,

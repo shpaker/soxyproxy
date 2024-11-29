@@ -39,8 +39,8 @@ class Rule:
 class Ruleset:
     def __init__(
         self,
-        allow_rules: list[Rule] | None,
-        block_rules: list[Rule] | None,
+        allow_rules: list[Rule] | None = None,
+        block_rules: list[Rule] | None = None,
     ) -> None:
         self._allow_rules = allow_rules or []
         self._block_rules = block_rules or []

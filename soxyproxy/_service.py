@@ -16,10 +16,10 @@ class ProxyService:
     def __init__(
         self,
         protocol: ProxySocks,
-        ruleset: Ruleset,
+        ruleset: Ruleset | None = None,
     ) -> None:
         self._protocol = protocol
-        self._ruleset = ruleset
+        self._ruleset = ruleset if ruleset else Ruleset()
 
     async def before_remote_open(
         self,

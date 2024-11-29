@@ -1,9 +1,9 @@
 import asyncio
 from typing import Self
 
-from soxyproxy import Destination, RejectError
+from soxyproxy._errors import RejectError
 from soxyproxy._service import ProxyService
-from soxyproxy._types import Connection, ProxyTransport
+from soxyproxy._types import Connection, Destination, ProxyTransport
 
 
 class TCPConnection(
