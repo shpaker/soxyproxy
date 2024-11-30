@@ -10,8 +10,8 @@ from soxyproxy._errors import (
 )
 from soxyproxy._logger import logger
 from soxyproxy._types import (
-    Connection,
     Address,
+    Connection,
     Resolver,
     Socks4Auther,
     Socks4Command,
@@ -50,7 +50,7 @@ class Socks4(
             + port_to_bytes(destination.port)
             + destination.address.packed
         )
-        logger.info(f"{client} SOCKS4 response: {reply.name}")
+        logger.info(f'{client} SOCKS4 response: {reply.name}')
 
     async def reject(
         self,
@@ -163,7 +163,7 @@ class Socks4(
         data: bytes,
     ) -> Address:
         try:
-            port, raw_address = struct.unpack("!HI", data[2:8])
+            port, raw_address = struct.unpack('!HI', data[2:8])
         except (struct.error, IndexError) as exc:
             raise await self.reject(client) from exc
         return Address(
@@ -178,9 +178,9 @@ class Socks4(
         is_socks4a: bool,
         destination: Address,
     ) -> tuple[str | None, str | None]:
-        if b"\x00" in data:
+        if b'\x00' in data:
             try:
-                username_bytes, domain_bytes = data[8:-1].split(b"\x00")
+                username_bytes, domain_bytes = data[8:-1].split(b'\x00')
             except (ValueError, IndexError) as exc:
                 raise await self.reject(
                     client,
@@ -227,9 +227,9 @@ class Socks4(
                 auther=self._auther,
                 username=username,
             )
-            logger.info(f"{self} {username} authorized")
+            logger.info(f'{self} {username} authorized')
         except AuthorizationError as exc:
-            logger.info(f"{self} fail to authorize {username}")
+            logger.info(f'{self} fail to authorize {username}')
             raise await self.reject(
                 client,
                 reply=Socks4Reply.IDENTD_REJECTED,

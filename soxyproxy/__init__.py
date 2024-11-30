@@ -11,30 +11,30 @@ from soxyproxy._socks4 import Socks4
 from soxyproxy._socks5 import Socks5
 from soxyproxy._tcp import TcpTransport
 from soxyproxy._types import (
-    Connection,
     Address,
+    Connection,
     ProxySocks,
     ProxyTransport,
 )
 
 __all__ = [
-    "AuthorizationError",
-    "Connection",
-    "Address",
-    "PackageError",
+    'Address',
+    'AuthorizationError',
+    'Connection',
+    'PackageError',
     # errors
-    "ProtocolError",
-    "ProxyService",
+    'ProtocolError',
+    'ProxyService',
     # types
-    "ProxySocks",
-    "ProxyTransport",
-    "RejectError",
-    "ResolveDomainError",
-    "Rule",
-    "Ruleset",
+    'ProxySocks',
+    'ProxyTransport',
+    'RejectError',
+    'ResolveDomainError',
+    'Rule',
+    'Ruleset',
     # protocol implementations
-    "Socks4",
-    "Socks5",
+    'Socks4',
+    'Socks5',
     # transports
-    "TcpTransport",
+    'TcpTransport',
 ]

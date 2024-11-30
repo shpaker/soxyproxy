@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
 from soxyproxy._types import (
-    Connection,
     Address,
+    Connection,
     Resolver,
 )
 
