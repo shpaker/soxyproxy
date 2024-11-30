@@ -9,32 +9,32 @@ from soxyproxy._ruleset import Rule, Ruleset
 from soxyproxy._service import ProxyService
 from soxyproxy._socks4 import Socks4
 from soxyproxy._socks5 import Socks5
-from soxyproxy._tcp import TcpServer
+from soxyproxy._tcp import TcpTransport
 from soxyproxy._types import (
     Connection,
-    Destination,
+    Address,
     ProxySocks,
     ProxyTransport,
 )
 
 __all__ = [
-    'AuthorizationError',
-    'Connection',
-    'Destination',
-    'PackageError',
+    "AuthorizationError",
+    "Connection",
+    "Address",
+    "PackageError",
     # errors
-    'ProtocolError',
-    'ProxyService',
+    "ProtocolError",
+    "ProxyService",
     # types
-    'ProxySocks',
-    'ProxyTransport',
-    'RejectError',
-    'ResolveDomainError',
-    'Rule',
-    'Ruleset',
+    "ProxySocks",
+    "ProxyTransport",
+    "RejectError",
+    "ResolveDomainError",
+    "Rule",
+    "Ruleset",
     # protocol implementations
-    'Socks4',
-    'Socks5',
+    "Socks4",
+    "Socks5",
     # transports
-    'TcpServer',
+    "TcpTransport",
 ]

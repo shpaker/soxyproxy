@@ -80,7 +80,7 @@ class Socks5ConnectionReply(
     ADDRESS_TYPE_NOT_SUPPORTED = 8
 
 
-class Destination(
+class Address(
     tp.NamedTuple,
 ):
     address: IPv4Address | IPv6Address
@@ -90,8 +90,8 @@ class Destination(
 class Connection(
     tp.Protocol,
 ):
-    destination: Destination
-
+    @property
+    def address(self) -> Address: ...
     @classmethod
     async def open(cls, host: str, port: int) -> tp.Self: ...
     async def read(self) -> bytes: ...
@@ -105,10 +105,10 @@ class ProxyTransport(tp.Protocol):
 class ProxySocks(
     tp.Protocol,
 ):
-    async def __call__(self, client: Connection, data: bytes) -> Destination: ...
+    async def __call__(self, client: Connection, data: bytes) -> Address: ...
 
-    async def ruleset_reject(self, client: Connection, destination: Destination): ...
-    async def success(self, client: Connection, destination: Destination) -> None: ...
+    async def ruleset_reject(self, client: Connection, destination: Address): ...
+    async def success(self, client: Connection, destination: Address) -> None: ...
     async def target_unreachable(
-        self, client: Connection, destination: Destination
+        self, client: Connection, destination: Address
     ) -> None: ...

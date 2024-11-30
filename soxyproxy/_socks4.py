@@ -11,7 +11,7 @@ from soxyproxy._errors import (
 from soxyproxy._logger import logger
 from soxyproxy._types import (
     Connection,
-    Destination,
+    Address,
     Resolver,
     Socks4Auther,
     Socks4Command,
@@ -43,23 +43,23 @@ class Socks4(
         self,
         client: Connection,
         reply: Socks4Reply,
-        destination: Destination,
+        destination: Address,
     ) -> None:
         await client.write(
             bytes([0, reply.value])
             + port_to_bytes(destination.port)
             + destination.address.packed
         )
-        logger.info(f'{client} SOCKS4 response: {reply.name}')
+        logger.info(f"{client} SOCKS4 response: {reply.name}")
 
     async def reject(
         self,
         client: Connection,
         reply: Socks4Reply = Socks4Reply.REJECTED,
-        destination: Destination | None = None,
+        destination: Address | None = None,
     ) -> RejectError:
         if destination is None:
-            destination = Destination(address=IPv4Address(1), port=0)
+            destination = Address(address=IPv4Address(1), port=0)
         await self.send(
             client=client,
             reply=reply,
@@ -73,9 +73,9 @@ class Socks4(
     async def ruleset_reject(
         self,
         client: Connection,
-        destination: Destination,
+        destination: Address,
     ) -> None:
-        raise await self.reject(
+        await self.reject(
             client=client,
             destination=destination,
         )
@@ -83,7 +83,7 @@ class Socks4(
     async def success(
         self,
         client: Connection,
-        destination: Destination,
+        destination: Address,
     ) -> None:
         await self.send(
             client=client,
@@ -94,7 +94,7 @@ class Socks4(
     async def target_unreachable(
         self,
         client: Connection,
-        destination: Destination,
+        destination: Address,
     ) -> None:
         await self.reject(
             client=client,
@@ -105,7 +105,7 @@ class Socks4(
         self,
         client: Connection,
         data: bytes,
-    ) -> Destination:
+    ) -> Address:
         check_protocol_version(data, SocksVersions.SOCKS4)
         if data[-1] != 0:
             raise PackageError(data)
@@ -146,7 +146,7 @@ class Socks4(
             )
         except ResolveDomainError as exc:
             raise await self.reject(client) from exc
-        destination = Destination(
+        destination = Address(
             address=resolved,
             port=destination.port,
         )
@@ -161,12 +161,12 @@ class Socks4(
         self,
         client: Connection,
         data: bytes,
-    ) -> Destination:
+    ) -> Address:
         try:
-            port, raw_address = struct.unpack('!HI', data[2:8])
+            port, raw_address = struct.unpack("!HI", data[2:8])
         except (struct.error, IndexError) as exc:
             raise await self.reject(client) from exc
-        return Destination(
+        return Address(
             address=IPv4Address(raw_address),
             port=port,
         )
@@ -176,11 +176,11 @@ class Socks4(
         client: Connection,
         data: bytes,
         is_socks4a: bool,
-        destination: Destination,
+        destination: Address,
     ) -> tuple[str | None, str | None]:
-        if b'\x00' in data:
+        if b"\x00" in data:
             try:
-                username_bytes, domain_bytes = data[8:-1].split(b'\x00')
+                username_bytes, domain_bytes = data[8:-1].split(b"\x00")
             except (ValueError, IndexError) as exc:
                 raise await self.reject(
                     client,
@@ -206,7 +206,7 @@ class Socks4(
         self,
         client: Connection,
         username: str | None,
-        destination: Destination,
+        destination: Address,
     ) -> None:
         if username and not self._auther:
             raise await self.reject(
@@ -227,9 +227,9 @@ class Socks4(
                 auther=self._auther,
                 username=username,
             )
-            logger.info(f'{self} {username} authorized')
+            logger.info(f"{self} {username} authorized")
         except AuthorizationError as exc:
-            logger.info(f'{self} fail to authorize {username}')
+            logger.info(f"{self} fail to authorize {username}")
             raise await self.reject(
                 client,
                 reply=Socks4Reply.IDENTD_REJECTED,

@@ -1,10 +1,8 @@
 import asyncio
 from ipaddress import IPv4Address
-from typing import Self
+from typing import Self, Callable, Awaitable
 
-from soxyproxy._errors import RejectError
-from soxyproxy._service import ProxyService
-from soxyproxy._types import Connection, Destination, ProxyTransport
+from soxyproxy._types import Connection, Address, ProxyTransport
 
 
 class TCPConnection(
@@ -18,19 +16,19 @@ class TCPConnection(
         self._reader = reader
         self._writer = writer
         address, port = self._writer.get_extra_info("peername")
-        self._destination = Destination(
+        self._address = Address(
             address=IPv4Address(address),
             port=port,
         )
 
     @property
-    def destination(
+    def address(
         self,
-    ) -> Destination:
-        return self._destination
+    ) -> Address:
+        return self._address
 
     def __repr__(self) -> str:
-        return f"<Connection {self.destination.address}:{self.destination.port}>"
+        return f"<Connection {self.address.address}:{self.address.port}>"
 
     async def __aenter__(self):
         return self
@@ -61,65 +59,63 @@ class TCPConnection(
         await self._writer.drain()
 
 
-class TcpServer(
+class TcpTransport(
     ProxyTransport,
 ):
     def __init__(
         self,
-        proxy: ProxyService,
         host: str = "127.0.0.1",
         port: int = 1080,
     ) -> None:
-        self._service = proxy
-        self._async_server_factory = asyncio.start_server(
+        self._address = (host, port)
+        self._on_client_connected_cb = None
+        self._start_messaging_cb = None
+
+    def init(
+        self,
+        on_client_connected_cb: Callable[[Connection], Awaitable[Address | None]],
+        start_messaging_cb: Callable[[Connection, Connection], Awaitable[None]],
+    ) -> None:
+        self._on_client_connected_cb = on_client_connected_cb
+        self._start_messaging_cb = start_messaging_cb
+
+    async def __aenter__(
+        self,
+    ):
+        return await asyncio.start_server(
             client_connected_cb=self._client_cb,
-            host=host,
-            port=port,
+            host=self._address[0],
+            port=self._address[1],
         )
 
-    async def __aenter__(self):
-        return await self._async_server_factory
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type,
+        exc_val,
+        exc_tb,
+    ) -> None:
         pass
-
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}>"
 
     async def _client_cb(
         self,
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
-        async with TCPConnection(reader, writer) as client:
+        async with TCPConnection(
+            reader=reader,
+            writer=writer,
+        ) as client:
             if not (
-                destination := await self._service.on_client_connect(
+                destination := await self._on_client_connected_cb(
                     client=client,
                 )
             ):
                 return
-            try:
-                await self._service.before_remote_open(
+            async with await TCPConnection.open(
+                host=str(destination.address),
+                port=destination.port,
+            ) as remote:
+                await self._start_messaging_cb(
                     client=client,
-                    destination=destination,
-                )
-            except RejectError:
-                return
-            try:
-                async with await TCPConnection.open(
-                    host=str(destination.address),
-                    port=destination.port,
-                ) as remote:
-                    await self._service.on_remote_open(
-                        client=client,
-                        remote=remote,
-                    )
-                    await self._service.start_messaging(
-                        client=client,
-                        remote=remote,
-                    )
-            except ConnectionError:
-                await self._service.on_remote_unreachable(
-                    client=client,
-                    destination=destination,
+                    remote=remote,
                 )

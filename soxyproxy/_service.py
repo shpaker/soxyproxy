@@ -9,76 +9,78 @@ from soxyproxy._errors import (
 )
 from soxyproxy._logger import logger
 from soxyproxy._ruleset import Ruleset
-from soxyproxy._types import Connection, Destination, ProxySocks
+from soxyproxy._tcp import TcpTransport
+from soxyproxy._types import Connection, ProxySocks, Address
 
 
 class ProxyService:
     def __init__(
         self,
         protocol: ProxySocks,
+        transport: TcpTransport | None = None,
         ruleset: Ruleset | None = None,
     ) -> None:
         self._protocol = protocol
-        self._ruleset = ruleset if ruleset else Ruleset()
+        transport if transport is not None else TcpTransport()
+        transport.init(
+            on_client_connected_cb=self._on_client_connected_transport_cb,
+            start_messaging_cb=self._start_messaging_transport_cb,
+        )
+        logger.info(f"initialized {transport} for {protocol}")
+        self._transport = transport
+        self._ruleset = ruleset if ruleset is not None else Ruleset()
 
-    async def before_remote_open(
+    async def __aenter__(
         self,
-        client: Connection,
-        destination: Destination,
-    ) -> None:
-        if (
-            self._ruleset(
-                client=client,
-                destination=destination,
-            )
-            is False
-        ):
-            await self._protocol.ruleset_reject(
-                client=client,
-                destination=destination,
-            )
+    ):
+        logger.info(f"{self} start serving")
+        return await self._transport.__aenter__()
 
-    async def on_remote_open(
+    async def __aexit__(
         self,
-        client: Connection,
-        remote: Connection,
+        exc_type,
+        exc_val,
+        exc_tb,
     ) -> None:
-        logger.info(f'{client} remote connection opened: {remote}')
-        await self._protocol.success(
-            client=client,
-            destination=remote.destination,
+        logger.info(f"{self} shutdown")
+        await self._transport.__aexit__(
+            exc_type,
+            exc_val,
+            exc_tb,
         )
 
-    async def on_remote_unreachable(
+    async def _on_client_connected_transport_cb(
         self,
         client: Connection,
-        destination: Destination,
-    ) -> None:
-        logger.info(
-            f'{client} remote {destination.address}:{destination.port} unreachable'
-        )
-        await self._protocol.target_unreachable(
-            client=client,
-            destination=destination,
-        )
-
-    async def on_client_connect(
-        self,
-        client: Connection,
-    ) -> Destination | None:
-        logger.info(f'{client} client connected')
+    ) -> Address | None:
+        logger.info(f"{client} client connected")
         if not (data := await client.read()):
             return None
         try:
-            return await self._protocol(client, data)
+            address = await self._protocol(client, data)
         except (PackageError, ProtocolError, RejectError, IndexError):
             return None
+        if self._ruleset(
+            client=client,
+            destination=address,
+        ):
+            return address
+        await self._protocol.ruleset_reject(
+            client=client,
+            destination=address,
+        )
 
-    @staticmethod
-    async def start_messaging(
+    async def _start_messaging_transport_cb(
+        self,
         client: Connection,
         remote: Connection,
     ) -> None:
+        logger.info(f"{client} remote connection opened: {remote}")
+        await self._protocol.success(
+            client=client,
+            destination=remote.address,
+        )
+        logger.info(f"{client} start messaging with {remote}")
         tasks: dict[Connection, asyncio.Task] = {
             client: asyncio.create_task(client.read()),
             remote: asyncio.create_task(remote.read()),
@@ -86,7 +88,6 @@ class ProxyService:
         conns = set(tasks.keys())
         closed = False
         started_at = datetime.now()
-        logger.info(f'{client} start messaging with {remote}')
         while not closed:
             try:
                 done, _ = await asyncio.wait(
@@ -107,12 +108,12 @@ class ProxyService:
                 tasks[conn] = asyncio.create_task(conn.read())
                 await another.write(data)
                 if conn is client:
-                    logger.info(f'{client} -> {len(data)} bytes -> {remote}')
+                    logger.info(f"{client} -> {len(data)} bytes -> {remote}")
                 else:
-                    logger.info(f'{client} <- {len(data)} bytes <- {remote}')
+                    logger.info(f"{client} <- {len(data)} bytes <- {remote}")
         for task in tasks.values():
             if not task.cancelled():
                 task.cancel()
         logger.info(
-            f'{client} stop messaging with {remote} (duration {datetime.now() - started_at})'
+            f"{client} stop messaging with {remote} (duration {datetime.now() - started_at})"
         )

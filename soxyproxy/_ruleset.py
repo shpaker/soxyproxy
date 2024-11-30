@@ -1,7 +1,7 @@
 from soxyproxy._logger import logger
 from soxyproxy._types import (
     Connection,
-    Destination,
+    Address,
     IPvAnyAddress,
     IPvAnyNetwork,
 )
@@ -21,10 +21,10 @@ class Rule:
     def __call__(
         self,
         client: Connection,
-        destination: Destination,
+        destination: Address,
     ) -> bool:
         return match_destination(
-            destination=client.destination,
+            destination=client.address,
             math_with=self._from_address,
         ) and match_destination(
             destination=destination,
@@ -49,7 +49,7 @@ class Ruleset:
     def __call__(
         self,
         client: Connection,
-        destination: Destination,
+        destination: Address,
     ) -> bool:
         result = None
         for rule in self._allow_rules:

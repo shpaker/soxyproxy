@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from soxyproxy._types import (
     Connection,
-    Destination,
+    Address,
     Resolver,
 )
 
@@ -20,7 +20,7 @@ class BaseSocks(
     async def success(
         self,
         client: Connection,
-        destination: Destination,
+        destination: Address,
     ) -> None:
         pass
 
@@ -28,7 +28,7 @@ class BaseSocks(
     async def target_unreachable(
         self,
         client: Connection,
-        destination: Destination,
+        destination: Address,
     ) -> None:
         pass
 
@@ -37,5 +37,5 @@ class BaseSocks(
         self,
         client: Connection,
         data: bytes,
-    ) -> Destination:
+    ) -> Address:
         pass

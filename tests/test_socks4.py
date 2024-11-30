@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from soxyproxy import (
-    Destination,
+    Address,
     PackageError,
     RejectError,
     ResolveDomainError,
@@ -25,7 +25,7 @@ async def test_resolver_ok() -> None:
         _FakeConn(),
         data=b"\x04\x01\x01\xbb\x00\x00\x00\x01\x00google.com\x00",
     )
-    assert results == Destination(
+    assert results == Address(
         address=IPv4Address("1.1.1.1"),
         port=443,
     )
@@ -59,7 +59,7 @@ async def test_ok() -> None:
         _FakeConn(),
         data=b"\x04\x01\x01\xbb\x8e\xfaJ.\x00",
     )
-    assert results == Destination(
+    assert results == Address(
         address=IPv4Address("142.250.74.46"),
         port=443,
     )
