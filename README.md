@@ -16,7 +16,7 @@ pip install soxyproxy
 import asyncio
 from ipaddress import IPv4Address, IPv4Network
 
-from soxy import TcpTransport, Proxy, Ruleset, Rule, Socks5
+from soxyproxy import TcpTransport, Proxy, Ruleset, Rule, Socks5
 
 
 async def main() -> None:

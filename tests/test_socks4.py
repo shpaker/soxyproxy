@@ -3,13 +3,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from soxy import (
+from soxyproxy import (
     Address,
     PackageError,
     RejectError,
     ResolveDomainError,
 )
-from soxy import Socks4, Connection
+from soxyproxy import Socks4, Connection
 
 socks = Socks4()
 

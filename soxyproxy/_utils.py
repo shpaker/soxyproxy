@@ -3,13 +3,13 @@ from ipaddress import IPv4Address
 from traceback import print_exc
 from typing import get_args
 
-from soxy._errors import (
+from soxyproxy._errors import (
     AuthorizationError,
     PackageError,
     ResolveDomainError,
 )
-from soxy._logger import logger
-from soxy._types import (
+from soxyproxy._logger import logger
+from soxyproxy._types import (
     Address,
     IPvAnyAddress,
     Resolver,
@@ -22,13 +22,13 @@ from soxy._types import (
 def port_from_bytes(
     data: bytes,
 ) -> int:
-    return int.from_bytes(data, byteorder="big")
+    return int.from_bytes(data, byteorder='big')
 
 
 def port_to_bytes(
     data: int,
 ) -> bytes:
-    return int.to_bytes(data, 2, byteorder="big")
+    return int.to_bytes(data, 2, byteorder='big')
 
 
 def check_protocol_version(
@@ -52,9 +52,9 @@ async def call_resolver(
     except Exception as exc:
         raise ResolveDomainError(name) from exc
     message = (
-        f"fail to resolve {name}"
+        f'fail to resolve {name}'
         if not result
-        else f"host {name} was resolved: IPv4 {result}"
+        else f'host {name} was resolved: IPv4 {result}'
     )
     logger.info(message)
     if not result:

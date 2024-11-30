@@ -1,15 +1,15 @@
 import struct
 from ipaddress import IPv4Address
 
-from soxy._base import BaseSocks
-from soxy._errors import (
+from soxyproxy._base import BaseSocks
+from soxyproxy._errors import (
     AuthorizationError,
     PackageError,
     RejectError,
     ResolveDomainError,
 )
-from soxy._logger import logger
-from soxy._types import (
+from soxyproxy._logger import logger
+from soxyproxy._types import (
     Address,
     Connection,
     Resolver,
@@ -18,7 +18,7 @@ from soxy._types import (
     Socks4Reply,
     SocksVersions,
 )
-from soxy._utils import (
+from soxyproxy._utils import (
     call_resolver,
     call_user_auther,
     check_protocol_version,
@@ -50,7 +50,7 @@ class Socks4(
             + port_to_bytes(destination.port)
             + destination.address.packed
         )
-        logger.info(f"{client} SOCKS4 response: {reply.name}")
+        logger.info(f'{client} SOCKS4 response: {reply.name}')
 
     async def reject(
         self,
@@ -180,9 +180,9 @@ class Socks4(
                 auther=self._auther,
                 username=username,
             )
-            logger.info(f"{self} {username} authorized")
+            logger.info(f'{self} {username} authorized')
         except AuthorizationError as exc:
-            logger.info(f"{self} fail to authorize {username}")
+            logger.info(f'{self} fail to authorize {username}')
             raise await self.reject(
                 client,
                 reply=Socks4Reply.IDENTD_REJECTED,
@@ -194,7 +194,7 @@ def _extract_destination(
     data: bytes,
 ) -> Address:
     try:
-        port, raw_address = struct.unpack("!HI", data[2:8])
+        port, raw_address = struct.unpack('!HI', data[2:8])
     except (struct.error, IndexError) as exc:
         raise PackageError(data) from exc
     return Address(
@@ -208,13 +208,15 @@ def _extract_from_tail(
     is_socks4a: bool,
 ) -> tuple[str | None, str | None]:
     tail = data[9:-1]
-    if b"\x00" in tail:
+    if b'\x00' in tail:
         try:
-            username_bytes, domain_bytes = tail[8:-1].split(b"\x00")
+            username_bytes, domain_bytes = tail[8:-1].split(b'\x00')
         except (ValueError, IndexError) as exc:
             raise PackageError(tail) from exc
     else:
-        username_bytes, domain_bytes = (tail, None) if not is_socks4a else (None, tail)
+        username_bytes, domain_bytes = (
+            (tail, None) if not is_socks4a else (None, tail)
+        )
     if not is_socks4a and domain_bytes:
         raise PackageError(data)
     try:
