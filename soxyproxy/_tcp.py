@@ -1,4 +1,5 @@
 import asyncio
+from ipaddress import IPv4Address
 from typing import Self
 
 from soxyproxy._errors import RejectError
@@ -16,9 +17,9 @@ class TCPConnection(
     ) -> None:
         self._reader = reader
         self._writer = writer
-        address, port = self._writer.get_extra_info('peername')
+        address, port = self._writer.get_extra_info("peername")
         self._destination = Destination(
-            address=address,
+            address=IPv4Address(address),
             port=port,
         )
 
@@ -29,9 +30,7 @@ class TCPConnection(
         return self._destination
 
     def __repr__(self) -> str:
-        return (
-            f'<Connection {self.destination.address}:{self.destination.port}>'
-        )
+        return f"<Connection {self.destination.address}:{self.destination.port}>"
 
     async def __aenter__(self):
         return self
@@ -68,7 +67,7 @@ class TcpServer(
     def __init__(
         self,
         proxy: ProxyService,
-        host: str = '127.0.0.1',
+        host: str = "127.0.0.1",
         port: int = 1080,
     ) -> None:
         self._service = proxy
@@ -85,7 +84,7 @@ class TcpServer(
         pass
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__}>'
+        return f"<{self.__class__.__name__}>"
 
     async def _client_cb(
         self,
@@ -97,7 +96,7 @@ class TcpServer(
                 destination := await self._service.on_client_connect(
                     client=client,
                 )
-            ) or isinstance(destination.address, str):
+            ):
                 return
             try:
                 await self._service.before_remote_open(

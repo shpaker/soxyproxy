@@ -5,6 +5,7 @@ from soxyproxy._types import (
     IPvAnyAddress,
     IPvAnyNetwork,
 )
+
 from soxyproxy._utils import match_destination
 
 
@@ -33,7 +34,7 @@ class Rule:
     def __repr__(
         self,
     ) -> str:
-        return f'<{self.__class__.__name__}: {self._from_address} -> {self._to_address}>'
+        return f"<{self.__class__.__name__}: from {self._from_address} to {self._to_address}>"
 
 
 class Ruleset:
@@ -50,18 +51,24 @@ class Ruleset:
         client: Connection,
         destination: Destination,
     ) -> bool:
-        result = False
+        result = None
         for rule in self._allow_rules:
-            result = rule(
+            if result := rule(
                 client=client,
                 destination=destination,
-            )
-            logger.info(f'{client} request ALLOWED by rule {rule}')
+            ):
+                logger.info(f"{client} request ALLOWED by {rule}")
+                break
         for rule in self._block_rules:
             if result := rule(
                 client=client,
                 destination=destination,
             ):
-                logger.info(f'{client} request BLOCKED by rule {rule}')
-                return result
+                logger.info(f"{client} request BLOCKED by {rule}")
+                return False
+        if result is None:
+            result = False
+            logger.info(
+                f"{client} not found allow-rule for {destination.address}:{destination.port}"
+            )
         return result
