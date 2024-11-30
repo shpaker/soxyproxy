@@ -1,16 +1,16 @@
-from soxyproxy._errors import (
+from soxy._errors import (
     AuthorizationError,
     PackageError,
     ProtocolError,
     RejectError,
     ResolveDomainError,
 )
-from soxyproxy._proxy import Proxy
-from soxyproxy._ruleset import Rule, Ruleset
-from soxyproxy._socks4 import Socks4
-from soxyproxy._socks5 import Socks5
-from soxyproxy._tcp import TcpTransport
-from soxyproxy._types import (
+from soxy._proxy import Proxy
+from soxy._ruleset import Rule, Ruleset
+from soxy._socks4 import Socks4
+from soxy._socks5 import Socks5
+from soxy._tcp import TcpTransport
+from soxy._types import (
     Address,
     Connection,
 )

@@ -10,13 +10,13 @@ pip install soxyproxy
 
 ## Usage
 
-### Usage from code
+### Используем из кода
 
 ```python
 import asyncio
 from ipaddress import IPv4Address, IPv4Network
 
-from soxyproxy import TcpTransport, Proxy, Ruleset, Rule, Socks5
+from soxy import TcpTransport, Proxy, Ruleset, Rule, Socks5
 
 
 async def main() -> None:
@@ -38,3 +38,38 @@ async def main() -> None:
 if __name__ == "__main__":
   asyncio.run(main())
 ```
+
+### В качестве инструмента коммандной строки
+
+1. устанавливаем с доп зависимостями для коммандной строки (`pyyaml`):
+
+  ```shell
+  pip install soxyproxy[cli]
+  ```
+
+1. пишем конфиг следующего вида и сохарняем в `socks5.toml`:
+
+  ```toml
+[proxy]
+protocol = "socks5"
+transport = "tcp"
+
+[credentials]
+user = "secret"
+
+[[ruleset.allow]]
+from = "127.0.0.1"
+to = "0.0.0.0/0"
+
+[[ruleset.allow]]
+from = "192.168.0.2"
+to = "0.0.0.0/0"
+  ```
+
+1. Если в окружении установлен пакет `pyyaml`, то можно писать конфиг на yaml't
+
+1. запускаем сервер:
+
+  ```shell
+  soxyproxy socks5.yaml 
+  ```

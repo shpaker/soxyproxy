@@ -19,6 +19,14 @@ dev = [
     "pytest>=8.3.3",
     "ruff>=0.8.0",
 ]
+cli = [
+    "click>=8.1.7",
+    "pydantic>=2.10.2",
+    "pyyaml>=6.0.2",
+]
+
+[project.scripts]
+soxy = "soxyproxy:cli_app"
 
 [tool.ruff]
 target-version = "py312"
