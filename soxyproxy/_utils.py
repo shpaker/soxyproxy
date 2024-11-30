@@ -1,5 +1,6 @@
 from asyncio import iscoroutine
 from ipaddress import IPv4Address
+from traceback import print_exc
 from typing import get_args
 
 from soxyproxy._errors import (
@@ -70,6 +71,7 @@ async def call_user_auther(
         if iscoroutine(result):
             result = await result
     except Exception:  # noqa: BLE001
+        print_exc()
         result = False
     if not result:
         raise AuthorizationError(username)
@@ -84,7 +86,8 @@ async def call_user_pass_auther(
         result = auther(username, password)
         if iscoroutine(result):
             result = await result
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # noqa: BLE001
+        print_exc()
         result = False
     if not result:
         raise AuthorizationError(username)

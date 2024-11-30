@@ -11,11 +11,11 @@ from soxyproxy._utils import match_destination
 class Rule:
     def __init__(
         self,
-        from_address: IPvAnyAddress | IPvAnyNetwork,
-        to_address: IPvAnyAddress | IPvAnyNetwork,
+        from_addresses: IPvAnyAddress | IPvAnyNetwork,
+        to_addresses: IPvAnyAddress | IPvAnyNetwork,
     ) -> None:
-        self._from_address = from_address
-        self._to_address = to_address
+        self._from_addresses = from_addresses
+        self._to_addresses = to_addresses
 
     def __call__(
         self,
@@ -24,16 +24,16 @@ class Rule:
     ) -> bool:
         return match_destination(
             destination=client.address,
-            math_with=self._from_address,
+            math_with=self._from_addresses,
         ) and match_destination(
             destination=destination,
-            math_with=self._to_address,
+            math_with=self._to_addresses,
         )
 
     def __repr__(
         self,
     ) -> str:
-        return f'<{self.__class__.__name__}: from {self._from_address} to {self._to_address}>'
+        return f'<{self.__class__.__name__}: from {self._from_addresses} to {self._to_addresses}>'
 
 
 class Ruleset:

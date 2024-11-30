@@ -115,7 +115,7 @@ class Socks4(
             raise await self.reject(client) from exc
         if command is Socks4Command.BIND:
             raise await self.reject(client)
-        destination = await self._extract_destination(client, data)
+        destination = _extract_destination(data)
         if len(data) == 9:
             if self._auther:
                 raise await self.reject(
@@ -124,11 +124,9 @@ class Socks4(
                 )
             return destination
         is_socks4a = destination.address <= IPv4Address(0xFF)
-        username, domain = await self._extract_from_tail(
-            client,
-            data=data[9:-1],
+        username, domain = _extract_from_tail(
+            data=data,
             is_socks4a=is_socks4a,
-            destination=destination,
         )
         if not is_socks4a:
             await self._authorization(
@@ -156,51 +154,6 @@ class Socks4(
             destination=destination,
         )
         return destination
-
-    async def _extract_destination(
-        self,
-        client: Connection,
-        data: bytes,
-    ) -> Address:
-        try:
-            port, raw_address = struct.unpack('!HI', data[2:8])
-        except (struct.error, IndexError) as exc:
-            raise await self.reject(client) from exc
-        return Address(
-            address=IPv4Address(raw_address),
-            port=port,
-        )
-
-    async def _extract_from_tail(
-        self,
-        client: Connection,
-        data: bytes,
-        is_socks4a: bool,
-        destination: Address,
-    ) -> tuple[str | None, str | None]:
-        if b'\x00' in data:
-            try:
-                username_bytes, domain_bytes = data[8:-1].split(b'\x00')
-            except (ValueError, IndexError) as exc:
-                raise await self.reject(
-                    client,
-                    destination=destination,
-                ) from exc
-        else:
-            username_bytes, domain_bytes = (
-                (data, None) if not is_socks4a else (None, data)
-            )
-        if not is_socks4a and domain_bytes:
-            raise await self.reject(client)
-        try:
-            username = username_bytes.decode() if username_bytes else None
-            domain = domain_bytes.decode() if domain_bytes else None
-        except UnicodeError as exc:
-            raise await self.reject(
-                client,
-                destination=destination,
-            ) from exc
-        return username, domain
 
     async def _authorization(
         self,
@@ -235,3 +188,40 @@ class Socks4(
                 reply=Socks4Reply.IDENTD_REJECTED,
                 destination=destination,
             ) from exc
+
+
+def _extract_destination(
+    data: bytes,
+) -> Address:
+    try:
+        port, raw_address = struct.unpack('!HI', data[2:8])
+    except (struct.error, IndexError) as exc:
+        raise PackageError(data) from exc
+    return Address(
+        address=IPv4Address(raw_address),
+        port=port,
+    )
+
+
+def _extract_from_tail(
+    data: bytes,
+    is_socks4a: bool,
+) -> tuple[str | None, str | None]:
+    tail = data[9:-1]
+    if b'\x00' in tail:
+        try:
+            username_bytes, domain_bytes = tail[8:-1].split(b'\x00')
+        except (ValueError, IndexError) as exc:
+            raise PackageError(tail) from exc
+    else:
+        username_bytes, domain_bytes = (
+            (tail, None) if not is_socks4a else (None, tail)
+        )
+    if not is_socks4a and domain_bytes:
+        raise PackageError(data)
+    try:
+        username = username_bytes.decode() if username_bytes else None
+        domain = domain_bytes.decode() if domain_bytes else None
+    except UnicodeError as exc:
+        raise PackageError(data) from exc
+    return username, domain

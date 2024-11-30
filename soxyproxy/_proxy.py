@@ -5,7 +5,6 @@ from traceback import print_exc
 from soxyproxy._errors import (
     PackageError,
     ProtocolError,
-    RejectError,
 )
 from soxyproxy._logger import logger
 from soxyproxy._ruleset import Ruleset
@@ -13,7 +12,7 @@ from soxyproxy._tcp import TcpTransport
 from soxyproxy._types import Address, Connection, ProxySocks
 
 
-class ProxyService:
+class Proxy:
     def __init__(
         self,
         protocol: ProxySocks,
@@ -58,7 +57,11 @@ class ProxyService:
             return None
         try:
             address = await self._protocol(client, data)
-        except (PackageError, ProtocolError, RejectError, IndexError):
+        except PackageError as exc:
+            logger.info(f'{client} package error ({exc.data})')
+            return None
+        except ProtocolError as exc:
+            logger.info(f'{client} protocol error ({exc.__class__.__name__})')
             return None
         if self._ruleset(
             client=client,

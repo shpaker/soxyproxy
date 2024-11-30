@@ -29,7 +29,7 @@ class TCPConnection(
         return self._address
 
     def __repr__(self) -> str:
-        return f'<Connection {self.address.address}:{self.address.port}>'
+        return f'<Connection id={id(self)} {self.address.address}:{self.address.port}>'
 
     async def __aenter__(self):
         return self

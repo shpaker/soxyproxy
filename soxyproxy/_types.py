@@ -26,11 +26,9 @@ class Socks4Command(
 class Socks4Reply(
     enum.IntEnum,
 ):
-    GRANTED = 0x5A  # Request granted
-    REJECTED = 0x5B  # Request rejected or failed
-    # Failed because client is not running identd (or not reachable from server)
+    GRANTED = 0x5A
+    REJECTED = 0x5B
     IDENTD_NOT_REACHABLE = 0x5C
-    # Failed because client's identd could not confirm the user ID in the request
     IDENTD_REJECTED = 0x5D
 
 
