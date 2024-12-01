@@ -19,7 +19,7 @@ from ipaddress import IPv4Address, IPv4Network
 from soxyproxy import TcpTransport, Proxy, Ruleset, Rule, Socks5
 
 
-async def main() -> None:
+async def async_main() -> None:
   async with Proxy(
     protocol=Socks5(),
     transport=TcpTransport(),
@@ -36,7 +36,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-  asyncio.run(main())
+  asyncio.run(async_main())
 ```
 
 ### В качестве инструмента коммандной строки
@@ -66,3 +66,5 @@ to = "0.0.0.0/0"
   ```shell
   soxyproxy socks5.yaml logs.txt 
   ```
+  
+  если хочется чтоб логи летели в терминал, то параметр с файлом логов можно не указывать и оставить просто `soxyproxy socks5.yaml` 
