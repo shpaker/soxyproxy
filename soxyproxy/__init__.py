@@ -1,3 +1,4 @@
+from soxyproxy._config import Config
 from soxyproxy._errors import (
     AuthorizationError,
     PackageError,
@@ -16,17 +17,18 @@ from soxyproxy._types import (
 )
 
 __all__ = [
-    'Address',
-    'AuthorizationError',
-    'Connection',
-    'PackageError',
-    'ProtocolError',
-    'Proxy',
-    'RejectError',
-    'ResolveDomainError',
-    'Rule',
-    'Ruleset',
-    'Socks4',
-    'Socks5',
-    'TcpTransport',
+    "Address",
+    "AuthorizationError",
+    "Config",
+    "Connection",
+    "PackageError",
+    "ProtocolError",
+    "Proxy",
+    "RejectError",
+    "ResolveDomainError",
+    "Rule",
+    "Ruleset",
+    "Socks4",
+    "Socks5",
+    "TcpTransport",
 ]

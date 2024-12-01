@@ -12,7 +12,7 @@ class Rule:
     def __init__(
         self,
         from_addresses: IPvAnyAddress | IPvAnyNetwork,
-        to_addresses: IPvAnyAddress | IPvAnyNetwork,
+        to_addresses: IPvAnyAddress | IPvAnyNetwork | str,
     ) -> None:
         self._from_addresses = from_addresses
         self._to_addresses = to_addresses
@@ -21,7 +21,12 @@ class Rule:
         self,
         client: Connection,
         destination: Address,
+        domain_name: str | None,
     ) -> bool:
+        if isinstance(self._to_addresses, str):
+            return not (
+                not isinstance(domain_name, str) or domain_name != self._to_addresses
+            )
         return match_destination(
             destination=client.address,
             math_with=self._from_addresses,
@@ -33,7 +38,7 @@ class Rule:
     def __repr__(
         self,
     ) -> str:
-        return f'<{self.__class__.__name__}: from {self._from_addresses} to {self._to_addresses}>'
+        return f"<{self.__class__.__name__}: from {self._from_addresses} to {self._to_addresses}>"
 
 
 class Ruleset:
@@ -49,25 +54,28 @@ class Ruleset:
         self,
         client: Connection,
         destination: Address,
+        domain_name: str | None,
     ) -> bool:
         result = None
         for rule in self._allow_rules:
             if result := rule(
                 client=client,
                 destination=destination,
+                domain_name=domain_name,
             ):
-                logger.info(f'{client} request ALLOWED by {rule}')
+                logger.info(f"{client} request ALLOWED by {rule}")
                 break
         for rule in self._block_rules:
             if result := rule(
                 client=client,
                 destination=destination,
+                domain_name=domain_name,
             ):
-                logger.info(f'{client} request BLOCKED by {rule}')
+                logger.info(f"{client} request BLOCKED by {rule}")
                 return False
         if result is None:
             result = False
             logger.info(
-                f'{client} not found allow-rule for {destination.address}:{destination.port}'
+                f"{client} not found allow-rule for {destination.address}:{destination.port}"
             )
         return result

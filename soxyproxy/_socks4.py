@@ -50,7 +50,7 @@ class Socks4(
             + port_to_bytes(destination.port)
             + destination.address.packed
         )
-        logger.info(f'{client} SOCKS4 response: {reply.name}')
+        logger.info(f"{client} SOCKS4 response: {reply.name}")
 
     async def reject(
         self,
@@ -105,7 +105,7 @@ class Socks4(
         self,
         client: Connection,
         data: bytes,
-    ) -> Address:
+    ) -> tuple[Address, str | None]:
         check_protocol_version(data, SocksVersions.SOCKS4)
         if data[-1] != 0:
             raise PackageError(data)
@@ -122,9 +122,9 @@ class Socks4(
                     client,
                     destination=destination,
                 )
-            return destination
+            return destination, None
         is_socks4a = destination.address <= IPv4Address(0xFF)
-        username, domain = _extract_from_tail(
+        username, domain_name = _extract_from_tail(
             data=data,
             is_socks4a=is_socks4a,
         )
@@ -134,13 +134,13 @@ class Socks4(
                 username=username,
                 destination=destination,
             )
-            return destination
-        if not self._resolver and domain:
+            return destination, None
+        if not self._resolver and domain_name:
             raise await self.reject(client)
         try:
             resolved = await call_resolver(
                 self._resolver,
-                name=domain,
+                name=domain_name,
             )
         except ResolveDomainError as exc:
             raise await self.reject(client) from exc
@@ -153,7 +153,7 @@ class Socks4(
             username=username,
             destination=destination,
         )
-        return destination
+        return destination, domain_name
 
     async def _authorization(
         self,
@@ -180,9 +180,9 @@ class Socks4(
                 auther=self._auther,
                 username=username,
             )
-            logger.info(f'{self} {username} authorized')
+            logger.info(f"{self} {username} authorized")
         except AuthorizationError as exc:
-            logger.info(f'{self} fail to authorize {username}')
+            logger.info(f"{self} fail to authorize {username}")
             raise await self.reject(
                 client,
                 reply=Socks4Reply.IDENTD_REJECTED,
@@ -194,7 +194,7 @@ def _extract_destination(
     data: bytes,
 ) -> Address:
     try:
-        port, raw_address = struct.unpack('!HI', data[2:8])
+        port, raw_address = struct.unpack("!HI", data[2:8])
     except (struct.error, IndexError) as exc:
         raise PackageError(data) from exc
     return Address(
@@ -208,20 +208,18 @@ def _extract_from_tail(
     is_socks4a: bool,
 ) -> tuple[str | None, str | None]:
     tail = data[9:-1]
-    if b'\x00' in tail:
+    if b"\x00" in tail:
         try:
-            username_bytes, domain_bytes = tail[8:-1].split(b'\x00')
+            username_bytes, domain_bytes = tail[8:-1].split(b"\x00")
         except (ValueError, IndexError) as exc:
             raise PackageError(tail) from exc
     else:
-        username_bytes, domain_bytes = (
-            (tail, None) if not is_socks4a else (None, tail)
-        )
+        username_bytes, domain_bytes = (tail, None) if not is_socks4a else (None, tail)
     if not is_socks4a and domain_bytes:
         raise PackageError(data)
     try:
         username = username_bytes.decode() if username_bytes else None
-        domain = domain_bytes.decode() if domain_bytes else None
+        domain_name = domain_bytes.decode() if domain_bytes else None
     except UnicodeError as exc:
         raise PackageError(data) from exc
-    return username, domain
+    return username, domain_name

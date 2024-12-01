@@ -41,21 +41,16 @@ if __name__ == "__main__":
 
 ### В качестве инструмента коммандной строки
 
-1. устанавливаем с доп зависимостями для коммандной строки (`pyyaml`):
-
-  ```shell
-  pip install soxyproxy[cli]
-  ```
-
-1. пишем конфиг следующего вида и сохарняем в `socks5.toml`:
+- пишем конфиг следующего вида и сохарняем в `socks5.toml`:
 
   ```toml
 [proxy]
 protocol = "socks5"
 transport = "tcp"
 
-[credentials]
-user = "secret"
+[transport]
+host = '127.0.0.1'
+port = 1080
 
 [[ruleset.allow]]
 from = "127.0.0.1"
@@ -66,10 +61,8 @@ from = "192.168.0.2"
 to = "0.0.0.0/0"
   ```
 
-1. Если в окружении установлен пакет `pyyaml`, то можно писать конфиг на yaml't
-
-1. запускаем сервер:
+- запускаем сервер:
 
   ```shell
-  soxyproxy socks5.yaml 
+  soxyproxy socks5.yaml logs.txt 
   ```
