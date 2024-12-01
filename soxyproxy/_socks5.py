@@ -42,7 +42,9 @@ class Socks5(
         )
         self._auther = auther
         self._allowed_auth_method = (
-            Socks5AuthMethod.USERNAME if auther else Socks5AuthMethod.NO_AUTHENTICATION
+            Socks5AuthMethod.USERNAME
+            if auther
+            else Socks5AuthMethod.NO_AUTHENTICATION
         )
 
     def _resolve_domain_name(
@@ -134,7 +136,9 @@ class Socks5(
         if auth_methods_num != len(auth_methods):
             raise PackageError(data)
         if self._allowed_auth_method not in auth_methods:
-            await client.write(_greetings_pack_response(Socks5AuthMethod.NO_ACCEPTABLE))
+            await client.write(
+                _greetings_pack_response(Socks5AuthMethod.NO_ACCEPTABLE)
+            )
             raise PackageError(data)
         await client.write(
             _greetings_pack_response(
@@ -156,7 +160,9 @@ class Socks5(
             username_len = data[1]
             username = data[2 : 2 + username_len].decode()
             password_len = data[2 + username_len]
-            password = data[3 + username_len : 3 + username_len + password_len].decode()
+            password = data[
+                3 + username_len : 3 + username_len + password_len
+            ].decode()
         except (IndexError, UnicodeError) as exc:
             raise PackageError(data) from exc
         if auth_version != 1:
@@ -164,10 +170,12 @@ class Socks5(
         if self._auther is None:
             raise RuntimeError
         try:
-            status = await call_user_pass_auther(self._auther, username, password)
+            status = await call_user_pass_auther(
+                self._auther, username, password
+            )
         except AuthorizationError:
-            logger.info(f"{self} fail to authorize {username}")
-        logger.info(f"{self} {username} authorized")
+            logger.info(f'{self} fail to authorize {username}')
+        logger.info(f'{self} {username} authorized')
         await client.write(_authorization_pack_response(status))
 
     async def _connect(
@@ -289,5 +297,7 @@ def _connect_pack_response(
         response += bytes([Socks5AddressType.IPV6.value]) + address.packed
     if isinstance(address, str):
         address_types = Socks5AddressType.DOMAIN
-        response += bytes([address_types.value, len(address)]) + address.encode()
+        response += (
+            bytes([address_types.value, len(address)]) + address.encode()
+        )
     return response + port_to_bytes(port)
