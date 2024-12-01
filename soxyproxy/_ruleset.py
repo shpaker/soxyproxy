@@ -5,7 +5,7 @@ from soxyproxy._types import (
     IPvAnyAddress,
     IPvAnyNetwork,
 )
-from soxyproxy._utils import match_destination
+from soxyproxy._utils import match_addresses
 
 
 class Rule:
@@ -25,13 +25,12 @@ class Rule:
     ) -> bool:
         if isinstance(self._to_addresses, str):
             return not (
-                not isinstance(domain_name, str)
-                or domain_name != self._to_addresses
+                not isinstance(domain_name, str) or domain_name != self._to_addresses
             )
-        return match_destination(
+        return match_addresses(
             destination=client.address,
             math_with=self._from_addresses,
-        ) and match_destination(
+        ) and match_addresses(
             destination=destination,
             math_with=self._to_addresses,
         )
@@ -39,7 +38,7 @@ class Rule:
     def __repr__(
         self,
     ) -> str:
-        return f'<{self.__class__.__name__}: from {self._from_addresses} to {self._to_addresses}>'
+        return f"<{self.__class__.__name__}: from {self._from_addresses} to {self._to_addresses}>"
 
 
 class Ruleset:
@@ -64,7 +63,7 @@ class Ruleset:
                 destination=destination,
                 domain_name=domain_name,
             ):
-                logger.info(f'{client} request ALLOWED by {rule}')
+                logger.info(f"{client} request ALLOWED by {rule}")
                 break
         for rule in self._block_rules:
             if result := rule(
@@ -72,11 +71,11 @@ class Ruleset:
                 destination=destination,
                 domain_name=domain_name,
             ):
-                logger.info(f'{client} request BLOCKED by {rule}')
+                logger.info(f"{client} request BLOCKED by {rule}")
                 return False
         if result is None:
             result = False
             logger.info(
-                f'{client} not found allow-rule for {destination.address}:{destination.port}'
+                f"{client} not found allow-rule for {destination.address}:{destination.port}"
             )
         return result
