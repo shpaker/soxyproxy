@@ -207,10 +207,10 @@ def _extract_from_tail(
     data: bytes,
     is_socks4a: bool,
 ) -> tuple[str | None, str | None]:
-    tail = data[9:-1]
+    tail = data[8:-1]
     if b'\x00' in tail:
         try:
-            username_bytes, domain_bytes = tail[8:-1].split(b'\x00')
+            username_bytes, domain_bytes = tail.split(b'\x00')
         except (ValueError, IndexError) as exc:
             raise PackageError(tail) from exc
     else:

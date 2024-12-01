@@ -23,7 +23,7 @@ exclude = [
   ".venv",
 ]
 lint.ignore = [
-  "PLR0913", # Too many arguments to function call
+  "S101", # Too many arguments to function call
   "RUF001", # Docstring contains ambiguous chars
   "RUF002", # Docstring contains ambiguous chars
   "RUF003", # Docstring contains ambiguous chars

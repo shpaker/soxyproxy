@@ -24,7 +24,7 @@ def port_from_bytes(
 ) -> int:
     return int.from_bytes(
         data,
-        byteorder="big",
+        byteorder='big',
     )
 
 
@@ -34,7 +34,7 @@ def port_to_bytes(
     return int.to_bytes(
         data,
         2,
-        byteorder="big",
+        byteorder='big',
     )
 
 
@@ -59,9 +59,9 @@ async def call_resolver(
     except Exception as exc:
         raise ResolveDomainError(name) from exc
     message = (
-        f"fail to resolve {name}"
+        f'fail to resolve {name}'
         if not result
-        else f"host {name} was resolved: IPv4 {result}"
+        else f'host {name} was resolved: IPv4 {result}'
     )
     logger.info(message)
     if not result:
