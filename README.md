@@ -44,21 +44,21 @@ if __name__ == "__main__":
 - пишем конфиг следующего вида и сохарняем в `socks5.toml`:
 
   ```toml
-[proxy]
-protocol = "socks5"
-transport = "tcp"
-
-[transport]
-host = '127.0.0.1'
-port = 1080
-
-[[ruleset.allow]]
-from = "127.0.0.1"
-to = "0.0.0.0/0"
-
-[[ruleset.allow]]
-from = "192.168.0.2"
-to = "0.0.0.0/0"
+  [proxy]
+  protocol = "socks5"
+  transport = "tcp"
+  
+  [transport]
+  host = '127.0.0.1'
+  port = 1080
+  
+  [[ruleset.allow]]
+  from = "127.0.0.1"
+  to = "0.0.0.0/0"
+  
+  [[ruleset.allow]]
+  from = "192.168.0.2"
+  to = "0.0.0.0/0"
   ```
 
 - запускаем сервер:
