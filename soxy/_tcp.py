@@ -18,7 +18,7 @@ class TCPConnection(
         self._writer = writer
         address, port = self._writer.get_extra_info('peername')
         self._address = Address(
-            address=IPv4Address(address),
+            ip=IPv4Address(address),
             port=port,
         )
 

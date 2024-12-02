@@ -5,8 +5,7 @@ from ipaddress import IPv4Address, IPv4Network
 from pathlib import Path
 
 from soxy._ruleset import Rule, Ruleset
-from soxy._socks4 import Socks4
-from soxy._socks5 import Socks5
+from soxy._socks import Socks4, Socks5
 from soxy._tcp import TcpTransport
 from soxy._types import Transport
 

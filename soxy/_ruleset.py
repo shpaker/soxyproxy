@@ -1,3 +1,5 @@
+from typing import get_args
+
 from soxy._logger import logger
 from soxy._types import (
     Address,
@@ -5,7 +7,6 @@ from soxy._types import (
     IPvAnyAddress,
     IPvAnyNetwork,
 )
-from soxy._utils import match_addresses
 
 
 class Rule:
@@ -16,6 +17,15 @@ class Rule:
     ) -> None:
         self._from_addresses = from_addresses
         self._to_addresses = to_addresses
+
+    @staticmethod
+    def _match_addresses(
+        destination: Address,
+        math_with: IPvAnyAddress | IPvAnyAddress,
+    ) -> bool:
+        if isinstance(math_with, get_args(IPvAnyAddress.__value__)):
+            return destination.ip == math_with
+        return destination.ip in math_with
 
     def __call__(
         self,
@@ -28,10 +38,10 @@ class Rule:
                 not isinstance(domain_name, str)
                 or domain_name != self._to_addresses
             )
-        return match_addresses(
+        return self._match_addresses(
             destination=client.address,
             math_with=self._from_addresses,
-        ) and match_addresses(
+        ) and self._match_addresses(
             destination=destination,
             math_with=self._to_addresses,
         )

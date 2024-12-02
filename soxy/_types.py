@@ -3,8 +3,8 @@ import typing as tp
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
 type Resolver = tp.Callable[[str], IPv4Address | tp.Awaitable[IPv4Address]]
-type Socks4Auther = tp.Callable[[str], None | tp.Awaitable[None]]
-type Socks5Auther = tp.Callable[[str, str], None | tp.Awaitable[None]]
+type Socks4Auther = tp.Callable[[str], bool | tp.Awaitable[bool]]
+type Socks5Auther = tp.Callable[[str, str], bool | tp.Awaitable[bool]]
 type IPvAnyAddress = IPv4Address | IPv6Address
 type IPvAnyNetwork = IPv4Network | IPv6Network
 
