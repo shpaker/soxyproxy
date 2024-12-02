@@ -133,5 +133,5 @@ class Proxy:
             if not task.cancelled():
                 task.cancel()
         logger.info(
-            f'{client} stop messaging with {remote} (duration {datetime.now() - started_at})'
+            f'{client} stop messaging with {remote} (duration {datetime.now() - started_at})',
         )

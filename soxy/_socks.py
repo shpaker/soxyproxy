@@ -87,7 +87,7 @@ class Socks4(
         await client.write(
             bytes([0, reply.value])
             + port_to_bytes(destination.port)
-            + destination.ip.packed
+            + destination.ip.packed,
         )
         logger.info(f'{client} SOCKS4 response: {reply.name}')
 
@@ -152,7 +152,7 @@ class Socks4(
         if command is Socks4Command.BIND:
             raise await self.reject(client)
         destination = socks4_extract_destination(data)
-        if len(data) == 9:
+        if len(data) == 9:  # noqa: PLR2004
             if self._auther:
                 raise await self.reject(
                     client,
@@ -262,7 +262,7 @@ class Socks5(
                 reply,
                 address=address,
                 port=port,
-            )
+            ),
         )
         return RejectError(
             address=(
@@ -294,7 +294,7 @@ class Socks5(
                 Socks5ConnectionReply.SUCCEEDED,
                 address=destination.ip,
                 port=destination.port,
-            )
+            ),
         )
 
     async def target_unreachable(
@@ -307,7 +307,7 @@ class Socks5(
                 Socks5ConnectionReply.HOST_UNREACHABLE,
                 address=destination.ip,
                 port=destination.port,
-            )
+            ),
         )
 
     async def _greetings(
@@ -327,14 +327,18 @@ class Socks5(
             raise PackageError(data)
         if self._allowed_auth_method not in auth_methods:
             await client.write(
-                socks5_greetings_pack_response(Socks5AuthMethod.NO_ACCEPTABLE)
+                socks5_greetings_pack_response(Socks5AuthMethod.NO_ACCEPTABLE),
             )
-            raise PackageError(data)
+            raise PackageError(
+                data,
+            )
         await client.write(
             socks5_greetings_pack_response(
-                Socks5AuthMethod.USERNAME
-                if self._auther
-                else Socks5AuthMethod.NO_AUTHENTICATION
+                (
+                    Socks5AuthMethod.USERNAME
+                    if self._auther
+                    else Socks5AuthMethod.NO_AUTHENTICATION
+                ),
             ),
         )
 

@@ -90,7 +90,9 @@ class Connection(
 ):
     _address: Address
 
-    def __repr__(self) -> str:
+    def __repr__(
+        self,
+    ) -> str:
         return f'<soxy.{self.__class__.__name__} id={id(self)} {self.address.ip}:{self.address.port}>'
 
     @property
@@ -100,45 +102,77 @@ class Connection(
         return self._address
 
     @classmethod
-    async def open(cls, host: str, port: int) -> tp.Self: ...
-    async def read(self) -> bytes: ...
-    async def write(self, data: bytes) -> None: ...
+    async def open(
+        cls,
+        host: str,
+        port: int,
+    ) -> tp.Self: ...
+    async def read(
+        self,
+    ) -> bytes: ...
+    async def write(
+        self,
+        data: bytes,
+    ) -> None: ...
 
 
-class Transport(tp.Protocol):
+class Transport(
+    tp.Protocol,
+):
     def init(
         self,
         on_client_connected_cb: tp.Callable[
-            [Connection], tp.Awaitable[Address | None]
+            [Connection],
+            tp.Awaitable[Address | None],
         ],
         start_messaging_cb: tp.Callable[
-            [Connection, Connection], tp.Awaitable[None]
+            [Connection, Connection],
+            tp.Awaitable[None],
         ],
     ) -> None: ...
 
-    def __repr__(self) -> str:
+    def __repr__(
+        self,
+    ) -> str:
         return f'<soxy.{self.__class__.__name__}>'
 
     async def __aenter__(self):
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb): ...
+    async def __aexit__(
+        self,
+        exc_type,
+        exc_val,
+        exc_tb,
+    ): ...
 
 
 class ProxySocks(
     tp.Protocol,
 ):
-    def __repr__(self) -> str:
+    def __repr__(
+        self,
+    ) -> str:
         return f'<soxy.{self.__class__.__name__}>'
 
-    async def __call__(self, client: Connection, data: bytes) -> Address: ...
+    async def __call__(
+        self,
+        client: Connection,
+        data: bytes,
+    ) -> Address: ...
 
     async def ruleset_reject(
-        self, client: Connection, destination: Address
+        self,
+        client: Connection,
+        destination: Address,
     ): ...
     async def success(
-        self, client: Connection, destination: Address
+        self,
+        client: Connection,
+        destination: Address,
     ) -> None: ...
     async def target_unreachable(
-        self, client: Connection, destination: Address
+        self,
+        client: Connection,
+        destination: Address,
     ) -> None: ...

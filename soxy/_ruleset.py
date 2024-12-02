@@ -87,6 +87,6 @@ class Ruleset:
         if result is None:
             result = False
             logger.info(
-                f'{client} not found allow-rule for {destination.ip}:{destination.port}'
+                f'{client} not found allow-rule for {destination.ip}:{destination.port}',
             )
         return result

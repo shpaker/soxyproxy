@@ -15,7 +15,7 @@ dev = [
 ]
 
 [project.scripts]
-soxy = "soxyproxy:__main__"
+soxy = "soxy:__main__"
 
 [tool.ruff]
 target-version = "py312"
@@ -23,29 +23,23 @@ line-length = 79
 exclude = [
   ".venv",
 ]
-lint.ignore = [
-  "S101", # Too many arguments to function call
-  "RUF001", # Docstring contains ambiguous chars
-  "RUF002", # Docstring contains ambiguous chars
-  "RUF003", # Docstring contains ambiguous chars
-]
 lint.flake8-tidy-imports.ban-relative-imports = "all"
 lint.select = [
   "F", # Pyflakes
   "C90", # mccabe
   "I", # isort
   "N", # pep8-naming
-  # "D", # pydocstyle
+  #   "D", # pydocstyle
   "UP", # pyupgrade
   "YTT", # flake8-2020
   #   "ANN", # flake8-annotations
-  # "ASYNC", # flake8-async
+  "ASYNC", # flake8-async
   "S", # flake8-bandit
   "BLE", # flake8-blind-except
-  # "FBT", # flake8-boolean-trap
+  #   "FBT", # flake8-boolean-trap
   "B", # flake8-bugbear
   "A", # flake8-builtins
-  #  "COM", # flake8-commas
+#  "COM", # flake8-commas
   # "CPY", # flake8-copyright
   "C4", # flake8-comprehensions
   # "DTZ", # flake8-datetimez
@@ -53,7 +47,7 @@ lint.select = [
   # "DJ", # flake8-django
   "EM", # flake8-errmsg
   "EXE", # flake8-executable
-  #  "ISC", # flake8-implicit-str-concat
+#  "ISC", # flake8-implicit-str-concat
   "ICN", # flake8-import-conventions
   "G", # flake8-logging-format
   "INP", # flake8-no-pep420
@@ -74,10 +68,10 @@ lint.select = [
   "PTH", # flake8-use-pathlib
   "TD", # flake8-todos
   "FIX", # flake8-fixme
-  #  "ERA", # eradicate
+  "ERA", # eradicate
   # "PD", # pandas-vet
   "PGH", # pygrep-hooks
-  #  "PL", # Pylint
+  "PL", # Pylint
   "TRY", # tryceratops
   "FLY", # flynt
   # "NPY", # NumPy-specific rules

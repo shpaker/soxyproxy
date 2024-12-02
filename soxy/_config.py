@@ -49,7 +49,8 @@ class Config:
     ) -> Transport:
         transport_cls = None
         match self._proxy_data.get(
-            'transport', _DEFAULTS_PROXY_SECTION['transport']
+            'transport',
+            _DEFAULTS_PROXY_SECTION['transport'],
         ):
             case 'tcp':
                 transport_cls = TcpTransport
@@ -97,7 +98,8 @@ class Config:
         self,
     ) -> Socks4 | Socks5:
         match self._proxy_data.get(
-            'protocol', _DEFAULTS_PROXY_SECTION['protocol']
+            'protocol',
+            _DEFAULTS_PROXY_SECTION['protocol'],
         ):
             case 'socks4':
                 socks_cls = Socks4
