@@ -37,6 +37,5 @@ __all__ = [
     'Ruleset',
     'Socks4',
     'Socks5',
-    'Socks5',
     'TcpTransport',
 ]
