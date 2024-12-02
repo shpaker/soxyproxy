@@ -50,7 +50,7 @@ class Socks4(
             + port_to_bytes(destination.port)
             + destination.ip.packed
         )
-        logger.info(f"{client} SOCKS4 response: {reply.name}")
+        logger.info(f'{client} SOCKS4 response: {reply.name}')
 
     async def reject(
         self,
@@ -177,9 +177,9 @@ class Socks4(
                 auther=self._auther,
                 username=username,
             )
-            logger.info(f"{self} {username} authorized")
+            logger.info(f'{self} {username} authorized')
         except AuthorizationError as exc:
-            logger.info(f"{self} fail to authorize {username}")
+            logger.info(f'{self} fail to authorize {username}')
             raise await self.reject(
                 client,
                 reply=Socks4Reply.IDENTD_REJECTED,
@@ -191,7 +191,7 @@ def _extract_destination(
     data: bytes,
 ) -> Address:
     try:
-        port, raw_address = struct.unpack("!HI", data[2:8])
+        port, raw_address = struct.unpack('!HI', data[2:8])
     except (struct.error, IndexError) as exc:
         raise PackageError(data) from exc
     return Address(
@@ -205,9 +205,9 @@ def _extract_from_tail(
     is_socks4a: bool,
 ) -> tuple[str | None, str | None]:
     tail = data[8:-1]
-    if b"\x00" in tail:
+    if b'\x00' in tail:
         try:
-            username_bytes, domain_bytes = tail.split(b"\x00")
+            username_bytes, domain_bytes = tail.split(b'\x00')
         except (ValueError, IndexError) as exc:
             raise PackageError(tail) from exc
     else:

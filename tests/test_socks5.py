@@ -14,7 +14,7 @@ from soxy import (
 
 class _FakeConn(Connection):
     read = AsyncMock(
-        return_value=b"\x05\x01\x00\x01\x8e\xfaJ#\x01\xbb",
+        return_value=b'\x05\x01\x00\x01\x8e\xfaJ#\x01\xbb',
     )
 
 
@@ -22,11 +22,11 @@ class _FakeConn(Connection):
 async def test_ok() -> None:
     results = await Socks5()(
         _FakeConn(),
-        data=b"\x05\x02\x00\x01",
+        data=b'\x05\x02\x00\x01',
     )
     assert results == (
         Address(
-            ip=IPv4Address("142.250.74.35"),
+            ip=IPv4Address('142.250.74.35'),
             port=443,
         ),
         None,
@@ -39,7 +39,7 @@ async def test_resolver_ok(
 ) -> None:
     class _FakeConn(Connection):
         read = AsyncMock(
-            return_value=b"\x05\x01\x00\x03\tgoogle.com\x01\xbb",
+            return_value=b'\x05\x01\x00\x03\tgoogle.com\x01\xbb',
         )
         write = AsyncMock()
 
@@ -48,14 +48,14 @@ async def test_resolver_ok(
     )
     results = await socks(
         _FakeConn,
-        data=b"\x05\x02\x00\x01",
+        data=b'\x05\x02\x00\x01',
     )
     assert results == (
         Address(
-            ip=IPv4Address("1.1.1.1"),
+            ip=IPv4Address('1.1.1.1'),
             port=443,
         ),
-        "google.com",
+        'google.com',
     )
 
 
@@ -65,7 +65,7 @@ async def test_resolver_fail(
 ) -> None:
     class _FakeConn(Connection):
         read = AsyncMock(
-            return_value=b"\x05\x01\x00\x03\tgoogle.cm\x01\xbb",
+            return_value=b'\x05\x01\x00\x03\tgoogle.cm\x01\xbb',
         )
         write = AsyncMock()
 
@@ -75,5 +75,5 @@ async def test_resolver_fail(
     with pytest.raises(RejectError):
         await socks(
             _FakeConn,
-            data=b"\x05\x02\x00\x01",
+            data=b'\x05\x02\x00\x01',
         )

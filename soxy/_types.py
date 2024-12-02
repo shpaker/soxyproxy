@@ -91,7 +91,7 @@ class Connection(
     _address: Address
 
     def __repr__(self) -> str:
-        return f"<soxy.{self.__class__.__name__} id={id(self)} {self.address.ip}:{self.address.port}>"
+        return f'<soxy.{self.__class__.__name__} id={id(self)} {self.address.ip}:{self.address.port}>'
 
     @property
     def address(
@@ -117,7 +117,7 @@ class Transport(tp.Protocol):
     ) -> None: ...
 
     def __repr__(self) -> str:
-        return f"<soxy.{self.__class__.__name__}>"
+        return f'<soxy.{self.__class__.__name__}>'
 
     async def __aenter__(self):
         return self
@@ -129,7 +129,7 @@ class ProxySocks(
     tp.Protocol,
 ):
     def __repr__(self) -> str:
-        return f"<soxy.{self.__class__.__name__}>"
+        return f'<soxy.{self.__class__.__name__}>'
 
     async def __call__(self, client: Connection, data: bytes) -> Address: ...
 

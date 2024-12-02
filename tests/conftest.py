@@ -16,8 +16,8 @@ def resolver() -> Resolver:
     def _resolver(
         name: str,
     ) -> IPv4Address:
-        if name == "google.com":
-            return IPv4Address("1.1.1.1")
+        if name == 'google.com':
+            return IPv4Address('1.1.1.1')
         return None
 
     return _resolver

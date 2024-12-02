@@ -17,26 +17,26 @@ from soxy._types import (
     Resolver,
 )
 
-__title__ = "winregistry"
-__version__ = "0.0.0"
-__url__ = "https://github.com/shpaker/soxyproxy"
-__author__ = "Aleksandr Shpak"
-__author_email__ = "shpaker@gmail.com"
-__license__ = "MIT"
+__title__ = 'winregistry'
+__version__ = '0.0.0'
+__url__ = 'https://github.com/shpaker/soxyproxy'
+__author__ = 'Aleksandr Shpak'
+__author_email__ = 'shpaker@gmail.com'
+__license__ = 'MIT'
 __all__ = [
-    "Address",
-    "AuthorizationError",
-    "Config",
-    "Connection",
-    "PackageError",
-    "ProtocolError",
-    "Proxy",
-    "RejectError",
-    "ResolveDomainError",
-    "Resolver",
-    "Rule",
-    "Ruleset",
-    "Socks4",
-    "Socks5",
-    "TcpTransport",
+    'Address',
+    'AuthorizationError',
+    'Config',
+    'Connection',
+    'PackageError',
+    'ProtocolError',
+    'Proxy',
+    'RejectError',
+    'ResolveDomainError',
+    'Resolver',
+    'Rule',
+    'Ruleset',
+    'Socks4',
+    'Socks5',
+    'TcpTransport',
 ]

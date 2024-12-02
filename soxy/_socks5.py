@@ -171,8 +171,8 @@ class Socks5(
                 self._auther, username, password
             )
         except AuthorizationError:
-            logger.info(f"{self} fail to authorize {username}")
-        logger.info(f"{self} {username} authorized")
+            logger.info(f'{self} fail to authorize {username}')
+        logger.info(f'{self} {username} authorized')
         await client.write(_authorization_pack_response(status))
 
     async def _connect(

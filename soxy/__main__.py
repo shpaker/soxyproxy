@@ -12,10 +12,10 @@ async def amain(
         await app.serve_forever()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     asyncio.run(
         amain(
-            config=Config.from_path(Path("config.toml")),
+            config=Config.from_path(Path('config.toml')),
         )
     )

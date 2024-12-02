@@ -39,7 +39,7 @@ class Rule:
     def __repr__(
         self,
     ) -> str:
-        return f"<{self.__class__.__name__}: from {self._from_addresses} to {self._to_addresses}>"
+        return f'<{self.__class__.__name__}: from {self._from_addresses} to {self._to_addresses}>'
 
 
 class Ruleset:
@@ -64,7 +64,7 @@ class Ruleset:
                 destination=destination,
                 domain_name=domain_name,
             ):
-                logger.info(f"{client} request ALLOWED by {rule}")
+                logger.info(f'{client} request ALLOWED by {rule}')
                 break
         for rule in self._block_rules:
             if result := rule(
@@ -72,11 +72,11 @@ class Ruleset:
                 destination=destination,
                 domain_name=domain_name,
             ):
-                logger.info(f"{client} request BLOCKED by {rule}")
+                logger.info(f'{client} request BLOCKED by {rule}')
                 return False
         if result is None:
             result = False
             logger.info(
-                f"{client} not found allow-rule for {destination.ip}:{destination.port}"
+                f'{client} not found allow-rule for {destination.ip}:{destination.port}'
             )
         return result

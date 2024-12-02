@@ -16,7 +16,7 @@ class TCPConnection(
     ) -> None:
         self._reader = reader
         self._writer = writer
-        address, port = self._writer.get_extra_info("peername")
+        address, port = self._writer.get_extra_info('peername')
         self._address = Address(
             address=IPv4Address(address),
             port=port,
@@ -56,7 +56,7 @@ class TcpTransport(
 ):
     def __init__(
         self,
-        host: str = "127.0.0.1",
+        host: str = '127.0.0.1',
         port: int = 1080,
     ) -> None:
         self._address = (host, port)
