@@ -3,7 +3,7 @@ from collections.abc import Awaitable, Callable
 from ipaddress import IPv4Address
 from typing import Self
 
-from soxyproxy._types import Address, Connection, ProxyTransport
+from soxy._types import Address, Connection, Transport
 
 
 class TCPConnection(
@@ -16,20 +16,11 @@ class TCPConnection(
     ) -> None:
         self._reader = reader
         self._writer = writer
-        address, port = self._writer.get_extra_info('peername')
+        address, port = self._writer.get_extra_info("peername")
         self._address = Address(
             address=IPv4Address(address),
             port=port,
         )
-
-    @property
-    def address(
-        self,
-    ) -> Address:
-        return self._address
-
-    def __repr__(self) -> str:
-        return f'<Connection id={id(self)} {self.address.address}:{self.address.port}>'
 
     async def __aenter__(self):
         return self
@@ -61,11 +52,11 @@ class TCPConnection(
 
 
 class TcpTransport(
-    ProxyTransport,
+    Transport,
 ):
     def __init__(
         self,
-        host: str = '127.0.0.1',
+        host: str = "127.0.0.1",
         port: int = 1080,
     ) -> None:
         self._address = (host, port)
@@ -74,12 +65,8 @@ class TcpTransport(
 
     def init(
         self,
-        on_client_connected_cb: Callable[
-            [Connection], Awaitable[Address | None]
-        ],
-        start_messaging_cb: Callable[
-            [Connection, Connection], Awaitable[None]
-        ],
+        on_client_connected_cb: Callable[[Connection], Awaitable[Address | None]],
+        start_messaging_cb: Callable[[Connection, Connection], Awaitable[None]],
     ) -> None:
         self._on_client_connected_cb = on_client_connected_cb
         self._start_messaging_cb = start_messaging_cb
@@ -117,7 +104,7 @@ class TcpTransport(
             ):
                 return
             async with await TCPConnection.open(
-                host=str(destination.address),
+                host=str(destination.ip),
                 port=destination.port,
             ) as remote:
                 await self._start_messaging_cb(

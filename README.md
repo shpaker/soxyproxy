@@ -16,7 +16,7 @@ pip install soxyproxy
 import asyncio
 from ipaddress import IPv4Address, IPv4Network
 
-from soxyproxy import TcpTransport, Proxy, Ruleset, Rule, Socks5
+from soxy import TcpTransport, Proxy, Ruleset, Rule, Socks5
 
 
 async def async_main() -> None:
@@ -64,7 +64,7 @@ if __name__ == "__main__":
 - запускаем сервер:
 
   ```shell
-  soxyproxy socks5.yaml logs.txt 
+  soxyproxy socks5.toml logs.txt 
   ```
   
-  если хочется чтоб логи летели в терминал, то параметр с файлом логов можно не указывать и оставить просто `soxyproxy socks5.yaml` 
+  если хочется чтоб логи летели в терминал, то параметр с файлом логов можно не указывать и оставить просто `soxyproxy socks5.toml` 

@@ -2,9 +2,7 @@ import asyncio
 import logging
 from pathlib import Path
 
-from soxyproxy import Config, Proxy
-
-logging.basicConfig(level=logging.INFO)
+from soxy import Config, Proxy
 
 
 async def amain(
@@ -14,9 +12,10 @@ async def amain(
         await app.serve_forever()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(
         amain(
-            config=Config.from_path(Path('config.toml')),
+            config=Config.from_path(Path("config.toml")),
         )
     )

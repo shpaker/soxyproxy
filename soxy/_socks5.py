@@ -1,14 +1,14 @@
 from ipaddress import IPV4LENGTH, IPV6LENGTH, IPv4Address, IPv6Address
 
-from soxyproxy._base import BaseSocks
-from soxyproxy._errors import (
+from soxy._base import BaseSocks
+from soxy._errors import (
     AuthorizationError,
     PackageError,
     RejectError,
     ResolveDomainError,
 )
-from soxyproxy._logger import logger
-from soxyproxy._types import (
+from soxy._logger import logger
+from soxy._types import (
     Address,
     Connection,
     Resolver,
@@ -20,7 +20,7 @@ from soxyproxy._types import (
     Socks5ConnectionReply,
     SocksVersions,
 )
-from soxyproxy._utils import (
+from soxy._utils import (
     call_resolver,
     call_user_pass_auther,
     check_protocol_version,
@@ -42,16 +42,8 @@ class Socks5(
         )
         self._auther = auther
         self._allowed_auth_method = (
-            Socks5AuthMethod.USERNAME
-            if auther
-            else Socks5AuthMethod.NO_AUTHENTICATION
+            Socks5AuthMethod.USERNAME if auther else Socks5AuthMethod.NO_AUTHENTICATION
         )
-
-    def _resolve_domain_name(
-        self,
-        name: str,
-    ) -> IPv4Address:
-        pass
 
     async def __call__(
         self,
@@ -78,8 +70,11 @@ class Socks5(
             )
         )
         return RejectError(
-            address=address,
-            port=port,
+            address=(
+                Address(ip=address, port=port)
+                if not isinstance(address, str)
+                else Address(ip=IPv4Address(0), port=port)
+            ),
         )
 
     async def ruleset_reject(
@@ -90,7 +85,7 @@ class Socks5(
         await self.reject(
             reply=Socks5ConnectionReply.CONNECTION_NOT_ALLOWED_BY_RULESET,
             client=client,
-            address=destination.address,
+            address=destination.ip,
             port=destination.port,
         )
 
@@ -102,7 +97,7 @@ class Socks5(
         await client.write(
             _connect_pack_response(
                 Socks5ConnectionReply.SUCCEEDED,
-                address=destination.address,
+                address=destination.ip,
                 port=destination.port,
             )
         )
@@ -115,7 +110,7 @@ class Socks5(
         await client.write(
             _connect_pack_response(
                 Socks5ConnectionReply.HOST_UNREACHABLE,
-                address=destination.address,
+                address=destination.ip,
                 port=destination.port,
             )
         )
@@ -136,9 +131,7 @@ class Socks5(
         if auth_methods_num != len(auth_methods):
             raise PackageError(data)
         if self._allowed_auth_method not in auth_methods:
-            await client.write(
-                _greetings_pack_response(Socks5AuthMethod.NO_ACCEPTABLE)
-            )
+            await client.write(_greetings_pack_response(Socks5AuthMethod.NO_ACCEPTABLE))
             raise PackageError(data)
         await client.write(
             _greetings_pack_response(
@@ -160,9 +153,7 @@ class Socks5(
             username_len = data[1]
             username = data[2 : 2 + username_len].decode()
             password_len = data[2 + username_len]
-            password = data[
-                3 + username_len : 3 + username_len + password_len
-            ].decode()
+            password = data[3 + username_len : 3 + username_len + password_len].decode()
         except (IndexError, UnicodeError) as exc:
             raise PackageError(data) from exc
         if auth_version != 1:
@@ -170,12 +161,10 @@ class Socks5(
         if self._auther is None:
             raise RuntimeError
         try:
-            status = await call_user_pass_auther(
-                self._auther, username, password
-            )
+            status = await call_user_pass_auther(self._auther, username, password)
         except AuthorizationError:
-            logger.info(f'{self} fail to authorize {username}')
-        logger.info(f'{self} {username} authorized')
+            logger.info(f"{self} fail to authorize {username}")
+        logger.info(f"{self} {username} authorized")
         await client.write(_authorization_pack_response(status))
 
     async def _connect(
@@ -192,11 +181,18 @@ class Socks5(
             )
         except (IndexError, UnicodeError) as exc:
             raise PackageError(data) from exc
-        except (RejectError, ResolveDomainError) as exc:
+        except RejectError as exc:
             raise await self.reject(
                 reply=Socks5ConnectionReply.HOST_UNREACHABLE,
                 client=client,
-                address=exc.address,
+                address=exc.address.ip,
+                port=exc.address.port,
+            ) from exc
+        except ResolveDomainError as exc:
+            raise await self.reject(
+                reply=Socks5ConnectionReply.HOST_UNREACHABLE,
+                client=client,
+                address=exc.domain,
                 port=exc.port,
             ) from exc
         try:
@@ -205,14 +201,14 @@ class Socks5(
             raise await self.reject(
                 reply=Socks5ConnectionReply.COMMAND_NOT_SUPPORTED,
                 client=client,
-                address=destination.address,
+                address=destination.ip,
                 port=destination.port,
             ) from exc
         if command is not Socks5Command.CONNECT:
             raise await self.reject(
                 reply=Socks5ConnectionReply.COMMAND_NOT_SUPPORTED,
                 client=client,
-                address=destination.address,
+                address=destination.ip,
                 port=destination.port,
             )
         return destination, domain_name
@@ -231,13 +227,13 @@ class Socks5(
                 raise PackageError(data) from exc
             return (
                 Address(
-                    address=IPv6Address(raw_address),
+                    ip=IPv6Address(raw_address),
                     port=port,
                 ),
                 None,
             )
         if address_type == Socks5AddressType.DOMAIN:
-            domain_name = data[5 : 5 + data[4]].decode()
+            domain_name = data[5 : 6 + data[4]].decode()
             if not self._resolver:
                 raise await self.reject(
                     reply=Socks5ConnectionReply.ADDRESS_TYPE_NOT_SUPPORTED,
@@ -248,8 +244,8 @@ class Socks5(
             try:
                 return (
                     Address(
-                        address=await call_resolver(
-                            self._resolve_domain_name,
+                        ip=await call_resolver(
+                            self._resolver,
                             domain_name,
                         ),
                         port=port,
@@ -265,7 +261,7 @@ class Socks5(
                 ) from exc
         return (
             Address(
-                address=IPv4Address(data[4 : 4 + IPV4LENGTH // 8]),
+                ip=IPv4Address(data[4 : 4 + IPV4LENGTH // 8]),
                 port=port,
             ),
             None,
@@ -297,7 +293,5 @@ def _connect_pack_response(
         response += bytes([Socks5AddressType.IPV6.value]) + address.packed
     if isinstance(address, str):
         address_types = Socks5AddressType.DOMAIN
-        response += (
-            bytes([address_types.value, len(address)]) + address.encode()
-        )
+        response += bytes([address_types.value, len(address)]) + address.encode()
     return response + port_to_bytes(port)

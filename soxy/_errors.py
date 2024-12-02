@@ -1,5 +1,7 @@
 from ipaddress import IPv4Address, IPv6Address
 
+from soxy._types import Address
+
 
 class PackageError(
     ValueError,
@@ -29,13 +31,21 @@ class ResolveDomainError(
 ):
     def __init__(
         self,
-        domain: str,
+        domain_name: str,
+        port: int,
     ) -> None:
-        self._domain = domain
+        self._domain = domain_name
+        self._port = port
 
     @property
     def domain(self):
         return self._domain
+
+    @property
+    def port(
+        self,
+    ) -> int:
+        return self._port
 
 
 class AuthorizationError(
@@ -57,20 +67,12 @@ class RejectError(
 ):
     def __init__(
         self,
-        address: str | IPv4Address | IPv6Address,
-        port: int,
+        address: Address,
     ) -> None:
         self._address = address
-        self._port = port
 
     @property
     def address(
         self,
-    ) -> str | IPv4Address | IPv6Address:
+    ) -> Address:
         return self._address
-
-    @property
-    def port(
-        self,
-    ) -> int:
-        return self._port

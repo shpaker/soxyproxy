@@ -3,13 +3,13 @@ from ipaddress import IPv4Address
 from traceback import print_exc
 from typing import get_args
 
-from soxyproxy._errors import (
+from soxy._errors import (
     AuthorizationError,
     PackageError,
     ResolveDomainError,
 )
-from soxyproxy._logger import logger
-from soxyproxy._types import (
+from soxy._logger import logger
+from soxy._types import (
     Address,
     IPvAnyAddress,
     Resolver,
@@ -24,7 +24,7 @@ def port_from_bytes(
 ) -> int:
     return int.from_bytes(
         data,
-        byteorder='big',
+        byteorder="big",
     )
 
 
@@ -34,7 +34,7 @@ def port_to_bytes(
     return int.to_bytes(
         data,
         2,
-        byteorder='big',
+        byteorder="big",
     )
 
 
@@ -50,22 +50,22 @@ def check_protocol_version(
 
 async def call_resolver(
     resolver: Resolver,
-    name: str,
+    domain_name: str,
 ) -> IPv4Address:
     try:
-        result = resolver(name)
+        result = resolver(domain_name)
         if iscoroutine(result):
             result = await result
     except Exception as exc:
-        raise ResolveDomainError(name) from exc
+        raise ResolveDomainError(domain_name=domain_name) from exc
     message = (
-        f'fail to resolve {name}'
+        f"fail to resolve {domain_name}"
         if not result
-        else f'host {name} was resolved: IPv4 {result}'
+        else f"host {domain_name} was resolved: IPv4 {result}"
     )
     logger.info(message)
     if not result:
-        raise ResolveDomainError(name)
+        raise ResolveDomainError(domain_name=domain_name, port)
     return result
 
 
@@ -105,5 +105,5 @@ def match_addresses(
     math_with: IPvAnyAddress | IPvAnyAddress,
 ) -> bool:
     if isinstance(math_with, get_args(IPvAnyAddress.__value__)):
-        return destination.address == math_with
-    return destination.address in math_with
+        return destination.ip == math_with
+    return destination.ip in math_with
