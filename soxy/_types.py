@@ -1,6 +1,7 @@
 import enum
 import typing as tp
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
+from types import TracebackType
 
 type Resolver = tp.Callable[[str], IPv4Address | tp.Awaitable[IPv4Address]]
 type Socks4Auther = tp.Callable[[str], bool | tp.Awaitable[bool]]
@@ -136,15 +137,15 @@ class Transport(
     ) -> str:
         return f'<soxy.{self.__class__.__name__}>'
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> tp.Self:
         return self
 
     async def __aexit__(
         self,
-        exc_type,
-        exc_val,
-        exc_tb,
-    ): ...
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        exc_traceback: TracebackType | None,
+    ) -> None: ...
 
 
 class ProxySocks(
@@ -165,7 +166,7 @@ class ProxySocks(
         self,
         client: Connection,
         destination: Address,
-    ): ...
+    ) -> None: ...
     async def success(
         self,
         client: Connection,

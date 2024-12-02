@@ -19,18 +19,24 @@ class BaseWrapper(
         self,
         *args: str,
         **kwargs: str,
-    ) -> Any:
+    ) -> Any:  # noqa: ANN401
         result = self._func(*args, **kwargs)
         if iscoroutine(result):
             result = await result
         return result
 
     @abstractmethod
-    async def __call__(self, *args, **kwargs) -> Any:
+    async def __call__(
+        self,
+        *args: str,
+        **kwargs: str,
+    ) -> Any:  # noqa: ANN401
         raise NotImplementedError
 
 
-class AutherWrapper[T](BaseWrapper):
+class AutherWrapper[T](
+    BaseWrapper,
+):
     async def __call__(  # type: T
         self,
         *args: str,

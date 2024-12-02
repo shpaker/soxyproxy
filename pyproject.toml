@@ -29,17 +29,17 @@ lint.select = [
   "C90", # mccabe
   "I", # isort
   "N", # pep8-naming
-  #   "D", # pydocstyle
+  # "D", # pydocstyle
   "UP", # pyupgrade
   "YTT", # flake8-2020
-  #   "ANN", # flake8-annotations
+  "ANN", # flake8-annotations
   "ASYNC", # flake8-async
   "S", # flake8-bandit
   "BLE", # flake8-blind-except
-  #   "FBT", # flake8-boolean-trap
+  # "FBT", # flake8-boolean-trap
   "B", # flake8-bugbear
   "A", # flake8-builtins
-#  "COM", # flake8-commas
+  #  "COM", # flake8-commas
   # "CPY", # flake8-copyright
   "C4", # flake8-comprehensions
   # "DTZ", # flake8-datetimez
@@ -47,7 +47,7 @@ lint.select = [
   # "DJ", # flake8-django
   "EM", # flake8-errmsg
   "EXE", # flake8-executable
-#  "ISC", # flake8-implicit-str-concat
+  # "ISC", # flake8-implicit-str-concat
   "ICN", # flake8-import-conventions
   "G", # flake8-logging-format
   "INP", # flake8-no-pep420

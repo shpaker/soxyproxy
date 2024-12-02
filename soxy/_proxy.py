@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 from traceback import print_exc
+from types import TracebackType
 from typing import Self
 
 from soxy._config import Config
@@ -33,21 +34,21 @@ class Proxy:
 
     async def __aenter__(
         self,
-    ):
+    ) -> asyncio.Server:
         logger.info(f'{self} start serving')
         return await self._transport.__aenter__()
 
     async def __aexit__(
         self,
-        exc_type,
-        exc_val,
-        exc_tb,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        exc_traceback: TracebackType | None,
     ) -> None:
         logger.info(f'{self} shutdown')
         await self._transport.__aexit__(
             exc_type,
-            exc_val,
-            exc_tb,
+            exc_value,
+            exc_traceback,
         )
 
     @classmethod

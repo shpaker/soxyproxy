@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 from ipaddress import IPv4Address
+from types import TracebackType
 from typing import Self
 
 from soxy._types import Address, Connection, Transport
@@ -22,10 +23,17 @@ class TCPConnection(
             port=port,
         )
 
-    async def __aenter__(self):
+    async def __aenter__(
+        self,
+    ) -> Self:
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        exc_traceback: TracebackType | None,
+    ) -> None:
         self._writer.close()
         await self._writer.wait_closed()
 
@@ -79,7 +87,7 @@ class TcpTransport(
 
     async def __aenter__(
         self,
-    ):
+    ) -> asyncio.Server:
         return await asyncio.start_server(
             client_connected_cb=self._client_cb,
             host=self._address[0],
@@ -88,9 +96,9 @@ class TcpTransport(
 
     async def __aexit__(
         self,
-        exc_type,
-        exc_val,
-        exc_tb,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        exc_traceback: TracebackType | None,
     ) -> None:
         pass
 

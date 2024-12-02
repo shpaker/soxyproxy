@@ -7,11 +7,9 @@ class PackageError(
     def __init__(
         self,
         data: bytes,
-        *args,
-        **kwargs,
     ) -> None:
         self._data = data
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
     @property
     def data(self) -> bytes:
@@ -36,7 +34,9 @@ class ResolveDomainError(
         self._port = port
 
     @property
-    def domain(self):
+    def domain(
+        self,
+    ) -> str:
         return self._domain
 
     @property
@@ -56,7 +56,9 @@ class AuthorizationError(
         self._username = username
 
     @property
-    def username(self):
+    def username(
+        self,
+    ) -> str:
         return self._username
 
 
