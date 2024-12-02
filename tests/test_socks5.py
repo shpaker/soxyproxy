@@ -6,9 +6,9 @@ import pytest
 from soxy import (
     Address,
     Connection,
-    Socks5,
-    Resolver,
     RejectError,
+    Resolver,
+    Socks5,
 )
 
 

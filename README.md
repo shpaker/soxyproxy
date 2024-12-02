@@ -49,7 +49,7 @@ if __name__ == "__main__":
   transport = "tcp"
   
   [transport]
-  host = '127.0.0.1'
+  host = "127.0.0.1"
   port = 1080
   
   [[ruleset.allow]]

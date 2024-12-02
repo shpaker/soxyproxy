@@ -65,8 +65,12 @@ class TcpTransport(
 
     def init(
         self,
-        on_client_connected_cb: Callable[[Connection], Awaitable[Address | None]],
-        start_messaging_cb: Callable[[Connection, Connection], Awaitable[None]],
+        on_client_connected_cb: Callable[
+            [Connection], Awaitable[Address | None]
+        ],
+        start_messaging_cb: Callable[
+            [Connection, Connection], Awaitable[None]
+        ],
     ) -> None:
         self._on_client_connected_cb = on_client_connected_cb
         self._start_messaging_cb = start_messaging_cb

@@ -9,8 +9,8 @@ from soxy import (
     PackageError,
     RejectError,
     ResolveDomainError,
-    Socks4,
     Resolver,
+    Socks4,
 )
 
 
@@ -102,7 +102,6 @@ async def test_resolver_fail() -> None:
 async def test_auther_and_resolver_ok(
     resolver: Resolver,
 ) -> None:
-
     socks = Socks4(
         auther=lambda name: name == "foo",
         resolver=resolver,

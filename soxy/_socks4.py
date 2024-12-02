@@ -211,7 +211,9 @@ def _extract_from_tail(
         except (ValueError, IndexError) as exc:
             raise PackageError(tail) from exc
     else:
-        username_bytes, domain_bytes = (tail, None) if not is_socks4a else (None, tail)
+        username_bytes, domain_bytes = (
+            (tail, None) if not is_socks4a else (None, tail)
+        )
     if not is_socks4a and domain_bytes:
         raise PackageError(data)
     try:

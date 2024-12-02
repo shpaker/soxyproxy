@@ -65,7 +65,7 @@ async def call_resolver(
     )
     logger.info(message)
     if not result:
-        raise ResolveDomainError(domain_name=domain_name, port)
+        raise ResolveDomainError(domain_name=domain_name, port=0)
     return result
 
 

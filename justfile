@@ -1,4 +1,4 @@
-SOURCE_PATH := "soxyproxy"
+SOURCE_PATH := "soxy"
 
 upgrade:
     uv lock --upgrade

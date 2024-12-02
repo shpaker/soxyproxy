@@ -25,7 +25,8 @@ class Rule:
     ) -> bool:
         if isinstance(self._to_addresses, str):
             return not (
-                not isinstance(domain_name, str) or domain_name != self._to_addresses
+                not isinstance(domain_name, str)
+                or domain_name != self._to_addresses
             )
         return match_addresses(
             destination=client.address,

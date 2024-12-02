@@ -1,3 +1,3 @@
 import logging
 
-logger = logging.getLogger('soxyproxy')
+logger = logging.getLogger("soxyproxy")

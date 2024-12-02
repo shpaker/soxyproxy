@@ -33,10 +33,10 @@ __all__ = [
     "Proxy",
     "RejectError",
     "ResolveDomainError",
+    "Resolver",
     "Rule",
     "Ruleset",
     "Socks4",
     "Socks5",
     "TcpTransport",
-    "Resolver",
 ]

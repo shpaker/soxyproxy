@@ -108,8 +108,12 @@ class Connection(
 class Transport(tp.Protocol):
     def init(
         self,
-        on_client_connected_cb: tp.Callable[[Connection], tp.Awaitable[Address | None]],
-        start_messaging_cb: tp.Callable[[Connection, Connection], tp.Awaitable[None]],
+        on_client_connected_cb: tp.Callable[
+            [Connection], tp.Awaitable[Address | None]
+        ],
+        start_messaging_cb: tp.Callable[
+            [Connection, Connection], tp.Awaitable[None]
+        ],
     ) -> None: ...
 
     def __repr__(self) -> str:
@@ -129,8 +133,12 @@ class ProxySocks(
 
     async def __call__(self, client: Connection, data: bytes) -> Address: ...
 
-    async def ruleset_reject(self, client: Connection, destination: Address): ...
-    async def success(self, client: Connection, destination: Address) -> None: ...
+    async def ruleset_reject(
+        self, client: Connection, destination: Address
+    ): ...
+    async def success(
+        self, client: Connection, destination: Address
+    ) -> None: ...
     async def target_unreachable(
         self, client: Connection, destination: Address
     ) -> None: ...

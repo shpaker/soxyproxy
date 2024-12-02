@@ -88,5 +88,5 @@ lint.select = [
 ]
 
 [tool.ruff.format]
-quote-style = "single"
+quote-style = "double"
 docstring-code-format = true
