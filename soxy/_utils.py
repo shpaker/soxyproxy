@@ -1,9 +1,5 @@
-from soxy._errors import (
-    PackageError,
-)
-from soxy._types import (
-    SocksVersions,
-)
+from soxy._errors import PackageError
+from soxy._types import SocksVersions
 
 
 def port_from_bytes(

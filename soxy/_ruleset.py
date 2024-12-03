@@ -1,4 +1,4 @@
-from typing import get_args
+import typing
 
 from soxy._logger import logger
 from soxy._types import (
@@ -21,11 +21,14 @@ class Rule:
     @staticmethod
     def _match_addresses(
         destination: Address,
-        math_with: IPvAnyAddress | IPvAnyAddress,
+        math_with: IPvAnyAddress | IPvAnyNetwork,
     ) -> bool:
-        if isinstance(math_with, get_args(IPvAnyAddress.__value__)):
-            return destination.ip == math_with
-        return destination.ip in math_with
+        result = False
+        if isinstance(math_with, typing.get_args(IPvAnyAddress.__value__)):
+            result = destination.ip == math_with
+        if isinstance(math_with, typing.get_args(IPvAnyNetwork.__value__)):
+            result = destination.ip in math_with
+        return result
 
     def __call__(
         self,
@@ -34,10 +37,7 @@ class Rule:
         domain_name: str | None,
     ) -> bool:
         if isinstance(self._to_addresses, str):
-            return not (
-                not isinstance(domain_name, str)
-                or domain_name != self._to_addresses
-            )
+            return not (not isinstance(domain_name, str) or domain_name != self._to_addresses)
         return self._match_addresses(
             destination=client.address,
             math_with=self._from_addresses,

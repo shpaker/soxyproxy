@@ -1,63 +1,54 @@
-from abc import ABC, abstractmethod
-from asyncio import iscoroutine
-from collections.abc import Callable
+import asyncio
+import typing
 from ipaddress import IPv4Address
 from traceback import print_exc
-from typing import Any
+
+from soxy._types import (
+    Resolver,
+    Socks4AsyncAuther,
+    Socks4Auther,
+    Socks5AsyncAuther,
+    Socks5Auther,
+)
+
+_A = typing.TypeVar('_A')
+_R = typing.TypeVar('_R')
 
 
-class BaseWrapper(
-    ABC,
-):
-    def __init__(
-        self,
-        func: Callable[[Any], Any],
-    ) -> None:
-        self._func = func
-
-    async def _exec(
-        self,
-        *args: str,
-        **kwargs: str,
-    ) -> Any:  # noqa: ANN401
-        result = self._func(*args, **kwargs)
-        if iscoroutine(result):
-            result = await result
-        return result
-
-    @abstractmethod
-    async def __call__(
-        self,
-        *args: str,
-        **kwargs: str,
-    ) -> Any:  # noqa: ANN401
-        raise NotImplementedError
-
-
-class AutherWrapper[T](
-    BaseWrapper,
-):
-    async def __call__(  # type: T
-        self,
+def auther_wrapper(
+    _func: Socks4Auther | Socks5Auther | Socks4AsyncAuther | Socks5AsyncAuther,
+) -> Socks4AsyncAuther | Socks5AsyncAuther:
+    async def _inner(
         *args: str,
         **kwargs: str,
     ) -> bool:
         try:
-            result = await self._exec(*args, **kwargs)
+            result: bool = (
+                await _func(*args, **kwargs)  # type: ignore[assignment]
+                if asyncio.iscoroutinefunction(_func)
+                else _func(*args, **kwargs)
+            )
         except Exception:  # noqa: BLE001
             print_exc()
             result = False
         return result
 
+    return _inner
 
-class ResolverWrapper(BaseWrapper):
-    async def __call__(
-        self,
-        domain_name: str,
+
+def resolver_wrapper(
+    _func: Resolver,
+) -> typing.Callable[[str], typing.Awaitable[IPv4Address | None]]:
+    async def _inner(
+        name: str,
     ) -> IPv4Address | None:
         try:
-            result = await self._exec(domain_name)
+            result: IPv4Address | None = (
+                await _func(name) if asyncio.iscoroutinefunction(_func) else _func(name)  # type: ignore[assignment]
+            )
         except Exception:  # noqa: BLE001
             print_exc()
             return None
         return result
+
+    return _inner

@@ -76,3 +76,14 @@ class RejectError(
         self,
     ) -> Address:
         return self._address
+
+
+class ConfigError(
+    ValueError,
+):
+    def __init__(
+        self,
+        section: str,
+        message: str = 'incorrect configuration',
+    ) -> None:
+        super().__init__(f'[{section}] {message}')

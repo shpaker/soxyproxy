@@ -1,9 +1,10 @@
 import tomllib
 import typing
 from contextlib import suppress
-from ipaddress import IPv4Address, IPv4Network
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 from pathlib import Path
 
+from soxy._errors import ConfigError
 from soxy._ruleset import Rule, Ruleset
 from soxy._socks import Socks4, Socks5
 from soxy._tcp import TcpTransport
@@ -21,19 +22,22 @@ class Config:
         data: dict[str, typing.Any],
     ) -> None:
         self._proxy_data = data.get('proxy', _DEFAULTS_PROXY_SECTION)
-        self._transport_data = data.get('transport')
+        if not isinstance(transport_data := data.get('transport'), dict):
+            msg = 'transport'
+            raise ConfigError(msg)
+        self._transport_data = transport_data
         try:
             self._ruleset_data = data['ruleset']
         except ValueError as exc:
-            msg = 'ruleset configuration required'
-            raise ValueError(msg) from exc
+            msg = 'ruleset'
+            raise ConfigError(msg) from exc
 
     @classmethod
     def load(
         cls,
         fh: typing.BinaryIO,
     ) -> typing.Self:
-        return Config(tomllib.load(fh))
+        return cls(tomllib.load(fh))
 
     @classmethod
     def from_path(
@@ -47,7 +51,6 @@ class Config:
     def transport(
         self,
     ) -> Transport:
-        transport_cls = None
         match self._proxy_data.get(
             'transport',
             _DEFAULTS_PROXY_SECTION['transport'],
@@ -55,18 +58,18 @@ class Config:
             case 'tcp':
                 transport_cls = TcpTransport
             case _:
-                msg = '[proxy] specified unknown transport type'
-                raise ValueError(msg)
+                msg = 'transport'
+                raise ConfigError(msg)
         try:
             return transport_cls(**self._transport_data)
         except TypeError as exc:
-            msg = '[transport] specified incorrect transport parameters'
-            raise ValueError(msg) from exc
+            msg = 'transport'
+            raise ConfigError(msg) from exc
 
     def _make_rules(
         self,
         rules: list[dict[str, typing.Any]],
-    ) -> list[Rule]:
+    ) -> typing.Generator[Rule, None, None]:
         for rule_dict in rules:
             to_ = rule_dict.get('to')
             with suppress(ValueError):
@@ -74,6 +77,14 @@ class Config:
             try:
                 from_ = IPv4Address(rule_dict.get('from'))
             except ValueError:
+                continue
+            if not (
+                isinstance(to_, IPv4Address | IPv6Address | IPv4Network | IPv6Network)
+                and isinstance(
+                    from_,
+                    IPv4Address | IPv6Address | IPv4Network | IPv6Network | str,
+                )
+            ):
                 continue
             yield Rule(
                 from_addresses=from_,
@@ -97,6 +108,7 @@ class Config:
     def socks(
         self,
     ) -> Socks4 | Socks5:
+        socks_cls: type[Socks4] | type[Socks5]
         match self._proxy_data.get(
             'protocol',
             _DEFAULTS_PROXY_SECTION['protocol'],
@@ -106,6 +118,6 @@ class Config:
             case 'socks5':
                 socks_cls = Socks5
             case _:
-                msg = '[proxy] specified unknown protocol type'
-                raise ValueError(msg)
+                msg = 'protocol'
+                raise ConfigError(msg)
         return socks_cls()

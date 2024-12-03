@@ -1,8 +1,8 @@
 import asyncio
+import types
+import typing
 from datetime import datetime
 from traceback import print_exc
-from types import TracebackType
-from typing import Self
 
 from soxy._config import Config
 from soxy._errors import (
@@ -12,18 +12,18 @@ from soxy._errors import (
 from soxy._logger import logger
 from soxy._ruleset import Ruleset
 from soxy._tcp import TcpTransport
-from soxy._types import Address, Connection, ProxySocks
+from soxy._types import Address, Connection, ProxySocks, Transport
 
 
 class Proxy:
     def __init__(
         self,
         protocol: ProxySocks,
-        transport: TcpTransport | None = None,
+        transport: Transport | None = None,
         ruleset: Ruleset | None = None,
     ) -> None:
         self._protocol = protocol
-        transport if transport is not None else TcpTransport()
+        transport = transport if transport is not None else TcpTransport()
         transport.init(
             on_client_connected_cb=self._on_client_connected_transport_cb,
             start_messaging_cb=self._start_messaging_transport_cb,
@@ -42,7 +42,7 @@ class Proxy:
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        exc_traceback: TracebackType | None,
+        exc_traceback: types.TracebackType | None,
     ) -> None:
         logger.info(f'{self} shutdown')
         await self._transport.__aexit__(
@@ -55,7 +55,7 @@ class Proxy:
     def from_config(
         cls,
         config: Config,
-    ) -> Self:
+    ) -> typing.Self:
         return cls(
             protocol=config.socks,
             transport=config.transport,
@@ -72,7 +72,7 @@ class Proxy:
         try:
             address, domain_name = await self._protocol(client, data)
         except PackageError as exc:
-            logger.info(f'{client} package error ({exc.data})')
+            logger.info(f'{client} package error ({exc.data!r})')
             return None
         except ProtocolError as exc:
             logger.info(f'{client} protocol error ({exc.__class__.__name__})')
@@ -100,7 +100,7 @@ class Proxy:
             destination=remote.address,
         )
         logger.info(f'{client} start messaging with {remote}')
-        tasks: dict[Connection, asyncio.Task] = {
+        tasks: dict[Connection, asyncio.Task[bytes]] = {
             client: asyncio.create_task(client.read()),
             remote: asyncio.create_task(remote.read()),
         }

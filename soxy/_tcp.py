@@ -1,8 +1,7 @@
 import asyncio
-from collections.abc import Awaitable, Callable
+import types
+import typing
 from ipaddress import IPv4Address
-from types import TracebackType
-from typing import Self
 
 from soxy._types import Address, Connection, Transport
 
@@ -25,14 +24,14 @@ class TCPConnection(
 
     async def __aenter__(
         self,
-    ) -> Self:
+    ) -> typing.Self:
         return self
 
     async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        exc_traceback: TracebackType | None,
+        exc_traceback: types.TracebackType | None,
     ) -> None:
         self._writer.close()
         await self._writer.wait_closed()
@@ -42,7 +41,7 @@ class TCPConnection(
         cls,
         host: str,
         port: int,
-    ) -> Self:
+    ) -> typing.Self:
         reader, writer = await asyncio.open_connection(host, port)
         return cls(reader, writer)
 
@@ -68,18 +67,18 @@ class TcpTransport(
         port: int = 1080,
     ) -> None:
         self._address = (host, port)
-        self._on_client_connected_cb = None
-        self._start_messaging_cb = None
+        self._on_client_connected_cb: typing.Callable[[Connection], typing.Awaitable[Address | None]] | None = None
+        self._start_messaging_cb: typing.Callable[[Connection, Connection], typing.Awaitable[None]] | None = None
 
     def init(
         self,
-        on_client_connected_cb: Callable[
+        on_client_connected_cb: typing.Callable[
             [Connection],
-            Awaitable[Address | None],
+            typing.Awaitable[Address | None],
         ],
-        start_messaging_cb: Callable[
+        start_messaging_cb: typing.Callable[
             [Connection, Connection],
-            Awaitable[None],
+            typing.Awaitable[None],
         ],
     ) -> None:
         self._on_client_connected_cb = on_client_connected_cb
@@ -98,7 +97,7 @@ class TcpTransport(
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        exc_traceback: TracebackType | None,
+        exc_traceback: types.TracebackType | None,
     ) -> None:
         pass
 
@@ -107,21 +106,17 @@ class TcpTransport(
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
+        if self._on_client_connected_cb is None or self._start_messaging_cb is None:
+            msg = f'please initialize {self.__class__.__name__}'
+            raise TypeError(msg)
         async with TCPConnection(
             reader=reader,
             writer=writer,
         ) as client:
-            if not (
-                destination := await self._on_client_connected_cb(
-                    client=client,
-                )
-            ):
+            if not (destination := await self._on_client_connected_cb(client)):
                 return
             async with await TCPConnection.open(
                 host=str(destination.ip),
                 port=destination.port,
             ) as remote:
-                await self._start_messaging_cb(
-                    client=client,
-                    remote=remote,
-                )
+                await self._start_messaging_cb(client, remote)

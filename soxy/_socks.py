@@ -1,4 +1,5 @@
 import struct
+import typing
 from abc import ABC, abstractmethod
 from ipaddress import IPV4LENGTH, IPV6LENGTH, IPv4Address, IPv6Address
 
@@ -12,10 +13,12 @@ from soxy._types import (
     Address,
     Connection,
     Resolver,
+    Socks4AsyncAuther,
     Socks4Auther,
     Socks4Command,
     Socks4Reply,
     Socks5AddressType,
+    Socks5AsyncAuther,
     Socks5Auther,
     Socks5AuthMethod,
     Socks5AuthReply,
@@ -28,7 +31,7 @@ from soxy._utils import (
     port_from_bytes,
     port_to_bytes,
 )
-from soxy._wrappers import AutherWrapper, ResolverWrapper
+from soxy._wrappers import auther_wrapper, resolver_wrapper
 
 
 class _BaseSocks(
@@ -38,7 +41,9 @@ class _BaseSocks(
         self,
         resolver: Resolver | None = None,
     ) -> None:
-        self._resolver = ResolverWrapper(resolver)
+        self._resolver: typing.Callable[[str], typing.Awaitable[IPv4Address | None]] | None = (
+            (resolver_wrapper(resolver)) if resolver else None
+        )
 
     @abstractmethod
     async def success(
@@ -61,8 +66,7 @@ class _BaseSocks(
         self,
         client: Connection,
         data: bytes,
-    ) -> Address:
-        pass
+    ) -> tuple[Address, str | None]: ...
 
 
 class Socks4(
@@ -70,10 +74,12 @@ class Socks4(
 ):
     def __init__(
         self,
-        auther: Socks4Auther | None = None,
+        auther: Socks4Auther | Socks4AsyncAuther | None = None,
         resolver: Resolver | None = None,
     ) -> None:
-        self._auther = AutherWrapper[Socks4Auther](auther) if auther else None
+        self._auther: Socks4AsyncAuther | None = (
+            auther_wrapper(auther) if auther else None  # type: ignore[assignment]
+        )
         super().__init__(
             resolver=resolver,
         )
@@ -85,9 +91,7 @@ class Socks4(
         destination: Address,
     ) -> None:
         await client.write(
-            bytes([0, reply.value])
-            + port_to_bytes(destination.port)
-            + destination.ip.packed,
+            bytes([0, reply.value]) + port_to_bytes(destination.port) + destination.ip.packed,
         )
         logger.info(f'{client} SOCKS4 response: {reply.name}')
 
@@ -159,7 +163,7 @@ class Socks4(
                     destination=destination,
                 )
             return destination, None
-        is_socks4a = destination.ip <= IPv4Address(0xFF)
+        is_socks4a = isinstance(destination.ip, IPv4Address) and destination.ip <= IPv4Address(0xFF)
         username, domain_name = socks4_extract_from_tail(
             data=data,
             is_socks4a=is_socks4a,
@@ -171,11 +175,11 @@ class Socks4(
                 destination=destination,
             )
             return destination, None
-        if not self._resolver and domain_name:
+        if not domain_name or (self._resolver is None) or (domain_name is None):
             raise await self.reject(client)
         if (
             resolved := await self._resolver(
-                domain_name=domain_name,
+                domain_name,
             )
         ) is None:
             raise await self.reject(client)
@@ -210,6 +214,8 @@ class Socks4(
                     destination=destination,
                 )
             return
+        if self._auther is None:
+            raise RuntimeError
         is_auth = await self._auther(username)
         if is_auth is True:
             logger.info(f'{self} {username} authorized')
@@ -227,18 +233,16 @@ class Socks5(
 ):
     def __init__(
         self,
-        auther: Socks5Auther | None = None,
+        auther: Socks5Auther | Socks5AsyncAuther | None = None,
         resolver: Resolver | None = None,
     ) -> None:
         super().__init__(
             resolver=resolver,
         )
-        self._auther = AutherWrapper[Socks5Auther](auther) if auther else None
-        self._allowed_auth_method = (
-            Socks5AuthMethod.USERNAME
-            if auther
-            else Socks5AuthMethod.NO_AUTHENTICATION
+        self._auther: Socks5AsyncAuther | None = (
+            auther_wrapper(auther) if auther else None  # type: ignore[assignment]
         )
+        self._allowed_auth_method = Socks5AuthMethod.USERNAME if auther else Socks5AuthMethod.NO_AUTHENTICATION
 
     async def __call__(
         self,
@@ -318,9 +322,7 @@ class Socks5(
         check_protocol_version(data, SocksVersions.SOCKS5)
         try:
             auth_methods_num = data[1]
-            auth_methods = [
-                Socks5AuthMethod(raw_method) for raw_method in list(data[2:])
-            ]
+            auth_methods = [Socks5AuthMethod(raw_method) for raw_method in list(data[2:])]
         except (IndexError, ValueError) as exc:
             raise PackageError(data) from exc
         if auth_methods_num != len(auth_methods):
@@ -334,11 +336,7 @@ class Socks5(
             )
         await client.write(
             socks5_greetings_pack_response(
-                (
-                    Socks5AuthMethod.USERNAME
-                    if self._auther
-                    else Socks5AuthMethod.NO_AUTHENTICATION
-                ),
+                (Socks5AuthMethod.USERNAME if self._auther else Socks5AuthMethod.NO_AUTHENTICATION),
             ),
         )
 
@@ -354,9 +352,7 @@ class Socks5(
             username_len = data[1]
             username = data[2 : 2 + username_len].decode()
             password_len = data[2 + username_len]
-            password = data[
-                3 + username_len : 3 + username_len + password_len
-            ].decode()
+            password = data[3 + username_len : 3 + username_len + password_len].decode()
         except (IndexError, UnicodeError) as exc:
             raise PackageError(data) from exc
         if auth_version != 1:
@@ -487,15 +483,15 @@ def socks4_extract_from_tail(
     is_socks4a: bool,
 ) -> tuple[str | None, str | None]:
     tail = data[8:-1]
+    username_bytes: bytes | None
+    domain_bytes: bytes | None
     if b'\x00' in tail:
         try:
             username_bytes, domain_bytes = tail.split(b'\x00')
         except (ValueError, IndexError) as exc:
             raise PackageError(tail) from exc
     else:
-        username_bytes, domain_bytes = (
-            (tail, None) if not is_socks4a else (None, tail)
-        )
+        username_bytes, domain_bytes = (tail, None) if not is_socks4a else (None, tail)
     if not is_socks4a and domain_bytes:
         raise PackageError(data)
     try:
@@ -531,7 +527,5 @@ def socks5_connect_pack_response(
         response += bytes([Socks5AddressType.IPV6.value]) + address.packed
     if isinstance(address, str):
         address_types = Socks5AddressType.DOMAIN
-        response += (
-            bytes([address_types.value, len(address)]) + address.encode()
-        )
+        response += bytes([address_types.value, len(address)]) + address.encode()
     return response + port_to_bytes(port)

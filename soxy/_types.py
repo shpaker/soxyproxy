@@ -1,11 +1,17 @@
+import asyncio
 import enum
-import typing as tp
+import types
+import typing
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
-from types import TracebackType
 
-type Resolver = tp.Callable[[str], IPv4Address | tp.Awaitable[IPv4Address]]
-type Socks4Auther = tp.Callable[[str], bool | tp.Awaitable[bool]]
-type Socks5Auther = tp.Callable[[str, str], bool | tp.Awaitable[bool]]
+type Resolver = typing.Callable[[str], IPv4Address | typing.Awaitable[IPv4Address]]
+
+type Socks4Auther = typing.Callable[[str], bool]
+type Socks4AsyncAuther = typing.Callable[[str], typing.Awaitable[bool]]
+
+type Socks5Auther = typing.Callable[[str, str], bool]
+type Socks5AsyncAuther = typing.Callable[[str, str], typing.Awaitable[bool]]
+
 type IPvAnyAddress = IPv4Address | IPv6Address
 type IPvAnyNetwork = IPv4Network | IPv6Network
 
@@ -80,14 +86,14 @@ class Socks5ConnectionReply(
 
 
 class Address(
-    tp.NamedTuple,
+    typing.NamedTuple,
 ):
     ip: IPv4Address | IPv6Address
     port: int
 
 
 class Connection(
-    tp.Protocol,
+    typing.Protocol,
 ):
     _address: Address
 
@@ -107,7 +113,7 @@ class Connection(
         cls,
         host: str,
         port: int,
-    ) -> tp.Self: ...
+    ) -> typing.Self: ...
     async def read(
         self,
     ) -> bytes: ...
@@ -118,17 +124,17 @@ class Connection(
 
 
 class Transport(
-    tp.Protocol,
+    typing.Protocol,
 ):
     def init(
         self,
-        on_client_connected_cb: tp.Callable[
+        on_client_connected_cb: typing.Callable[
             [Connection],
-            tp.Awaitable[Address | None],
+            typing.Awaitable[Address | None],
         ],
-        start_messaging_cb: tp.Callable[
+        start_messaging_cb: typing.Callable[
             [Connection, Connection],
-            tp.Awaitable[None],
+            typing.Awaitable[None],
         ],
     ) -> None: ...
 
@@ -137,19 +143,18 @@ class Transport(
     ) -> str:
         return f'<soxy.{self.__class__.__name__}>'
 
-    async def __aenter__(self) -> tp.Self:
-        return self
+    async def __aenter__(self) -> asyncio.Server: ...
 
     async def __aexit__(
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        exc_traceback: TracebackType | None,
+        exc_traceback: types.TracebackType | None,
     ) -> None: ...
 
 
 class ProxySocks(
-    tp.Protocol,
+    typing.Protocol,
 ):
     def __repr__(
         self,
@@ -160,7 +165,7 @@ class ProxySocks(
         self,
         client: Connection,
         data: bytes,
-    ) -> Address: ...
+    ) -> tuple[Address, str | None]: ...
 
     async def ruleset_reject(
         self,
