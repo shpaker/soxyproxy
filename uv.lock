@@ -219,8 +219,8 @@ wheels = [
 
 [[package]]
 name = "soxyproxy"
-version = "0.1.0"
-source = { virtual = "." }
+version = "0.0.0"
+source = { editable = "." }
 
 [package.dev-dependencies]
 dev = [

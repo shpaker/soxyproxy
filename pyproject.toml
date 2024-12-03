@@ -41,7 +41,7 @@ dev = [
 ]
 
 [project.scripts]
-soxy = "soxy:__main__:main"
+soxy = "soxy.__main__:main"
 
 [tool.ruff]
 target-version = "py312"
