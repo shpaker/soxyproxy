@@ -1,7 +1,7 @@
 # soxy.Proxy
 
-[![PyPI](https://img.shields.io/pypi/v/soxyprox.svg)](https://pypi.python.org/pypi/soxyprox)
-[![PyPI](https://img.shields.io/pypi/dm/soxyprox.svg)](https://pypi.python.org/pypi/soxyprox)
+[![PyPI](https://img.shields.io/pypi/v/soxyproxy.svg)](https://pypi.python.org/pypi/soxyproxy)
+[![PyPI](https://img.shields.io/pypi/dm/soxyproxy.svg)](https://pypi.python.org/pypi/soxyproxy)
 
 Асинхронная socks4/4a/5/5h прокся, написанная от скуки в целях самообучения, ~~без единного гвоздя~~ без использования внешних зависимостей
 
