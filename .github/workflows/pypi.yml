@@ -1,0 +1,24 @@
+---
+name: pypi
+
+on:
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract branch name
+        shell: bash
+        run: |
+          echo "##[set-output name=ver;]$(echo ${GITHUB_REF#refs/*/})"
+        id: extract_name_and_version
+      - run: sed -i 's/0.0.0/'"${{ steps.extract_name_and_version.outputs.ver }}"'/' pyproject.toml
+      - run: head -n 10 pyproject.toml
+      - run: sed -i 's/0.0.0/'"${{ steps.extract_name_and_version.outputs.ver }}"'/' winregistry.py
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install 3.12
+      - run: uv sync --all-extras --dev
+      - run: uv publish --username __token__ --password ${{ secrets.PYPI_PASS }}
