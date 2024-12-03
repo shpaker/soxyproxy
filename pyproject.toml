@@ -10,6 +10,9 @@ authors = [
     {name = "Aleksandr Shpak", email = "shpaker@gmail.com"},
 ]
 classifiers = [
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Topic :: Internet :: Proxy Servers",
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.11",
