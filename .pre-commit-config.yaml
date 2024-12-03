@@ -1,47 +1,32 @@
+---
+default_install_hook_types:
+  - pre-commit
+
 repos:
-  -
-    repo: local
+
+  - repo: local
     hooks:
-      -
-        id: isort
-        name: isort
-        entry: isort
-        language: system
-        files: ^(soxyproxy|tests)/.+\.py$
-      -
-        id: black
-        name: black
-        entry: black
-        language: system
-        files: ^(soxyproxy|tests)/.+\.py$
-      -
-        id: flake8
-        name: flake8
-        entry: flake8
-        language: system
-        files: ^(soxyproxy|tests)/.+\.py$
-      -
-        id: pylint
-        name: pylint
-        entry: pylint
-        language: system
-        files: ^(soxyproxy|tests)/.+\.py$
-      -
-        id: mypy
+      - id: mypy
         name: mypy
-        entry: mypy
+        entry: python -m mypy
         language: system
-        files: ^(soxyproxy|tests)/.+\.py$
-  -
-    repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: "v3.4.0"
+        'types_or': [ python, pyi ]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: "v0.8.1"
+    hooks:
+      - id: ruff
+        args: [ --fix, --unsafe-fixes ]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v5.0.0"
     hooks:
       - id: check-added-large-files
-      - id: check-json
       - id: check-merge-conflict
-      - id: check-yaml
       - id: detect-private-key
+      - id: check-json
+      - id: check-toml
+      - id: check-yaml
+      - id: double-quote-string-fixer
       - id: end-of-file-fixer
-      - id: requirements-txt-fixer
-      - id: forbid-new-submodules
       - id: trailing-whitespace
+        exclude: ^.+(\.md)$

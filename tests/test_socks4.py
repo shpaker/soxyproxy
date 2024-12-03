@@ -1,76 +1,183 @@
-from logging import basicConfig, getLogger
+from ipaddress import IPv4Address
+from unittest.mock import AsyncMock
 
-from httpx import AsyncClient, Response
-from httpx_socks import ProxyError
-from pytest import mark
+import pytest
 
-from soxyproxy.consts import Socks4Reply
+from soxy import (
+    Address,
+    Connection,
+    PackageError,
+    RejectError,
+    ResolveDomainError,
+    Resolver,
+    Socks4,
+)
 
-logger = getLogger(__name__)
-basicConfig(level="DEBUG")
+
+class _FakeConn(Connection):
+    _address = Address(ip=IPv4Address(0), port=0)
 
 
-@mark.asyncio
-async def test_correct_request(
-    run_socks4_server,  # noqa, pylint: disable=unused-argument
-    proxy_transport,
+@pytest.mark.asyncio
+async def test_ok() -> None:
+    results = await Socks4()(
+        _FakeConn(),
+        data=b'\x04\x01\x01\xbb\x8e\xfaJ.\x00',
+    )
+    assert results == (
+        Address(
+            ip=IPv4Address('142.250.74.46'),
+            port=443,
+        ),
+        None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_auther_ok() -> None:
+    socks = Socks4(
+        auther=lambda name: name == 'foo',
+    )
+    results = await socks(
+        _FakeConn(),
+        data=b'\x04\x01\x01\xbb\xac\xd9\x15\xa3foo\x00',
+    )
+    assert results == (
+        Address(
+            ip=IPv4Address('172.217.21.163'),
+            port=443,
+        ),
+        None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_auther_fail() -> None:
+    socks = Socks4(
+        auther=lambda name: name == 'foo',
+    )
+    with pytest.raises(RejectError):
+        await socks(
+            _FakeConn(),
+            data=b'\x04\x01\x01\xbb\xac\xd9\x15\xa3bar\x00',
+        )
+
+
+@pytest.mark.asyncio
+async def test_resolver_ok(
+    resolver: Resolver,
 ) -> None:
-    transport = proxy_transport("socks4")
-    async with AsyncClient(transport=transport) as client:
-        res: Response = await client.get("https://httpbin.org/get")
-        res.raise_for_status()
+    socks = Socks4(
+        resolver=resolver,
+    )
+    results = await socks(
+        _FakeConn(),
+        data=b'\x04\x01\x01\xbb\x00\x00\x00\x01\x00google.com\x00',
+    )
+    assert results == (
+        Address(
+            ip=IPv4Address('1.1.1.1'),
+            port=443,
+        ),
+        'google.com',
+    )
 
 
-@mark.asyncio
-async def test_incorrect_request(
-    run_socks4_server,  # noqa, pylint: disable=unused-argument
-    proxy_transport,
+@pytest.mark.asyncio
+async def test_resolver_fail() -> None:
+    def resolver(domain_name: str) -> None:
+        raise ResolveDomainError(domain_name=domain_name, port=0)
+
+    socks = Socks4(
+        resolver=resolver,
+    )
+    with pytest.raises(RejectError):
+        await socks(
+            _FakeConn(),
+            data=b'\x04\x01\x01\xbb\x00\x00\x00\x01\x00google.com\x00',
+        )
+
+
+@pytest.mark.asyncio
+async def test_auther_and_resolver_ok(
+    resolver: Resolver,
 ) -> None:
-    transport = proxy_transport("socks4")
-    async with AsyncClient(transport=transport) as client:
-        try:
-            res: Response = await client.get("https://127.0.0.1:9449/get")
-            res.raise_for_status()
-        except ProxyError as err:
-            assert err.error_code == Socks4Reply.REJECTED, err
+    socks = Socks4(
+        auther=lambda name: name == 'foo',
+        resolver=resolver,
+    )
+    results = await socks(
+        _FakeConn(),
+        data=b'\x04\x01\x01\xbb\x00\x00\x00\x01foo\x00google.com\x00',
+    )
+    assert results == (
+        Address(ip=IPv4Address('1.1.1.1'), port=443),
+        'google.com',
+    )
 
 
-@mark.asyncio
-async def test_correct_package(
-    run_socks4_server,  # noqa, pylint: disable=unused-argument
-    send_data,
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ('data',),
+    [
+        pytest.param(
+            b'\x05\x01\x01\xbb\x8e\xfaJ.\x00',
+            id='incorrect version',
+        ),
+        pytest.param(
+            b'\x05\x01\x01\xbb\x8e\xfaJ.\x00\x05\x01\x01\xbb\x8e\xfaJ.\x00',
+            id='too large',
+        ),
+        pytest.param(
+            b'\x04\x01\x01\xbb\x8e\xfaJ.\x01',
+            id='reserved not null',
+        ),
+    ],
+)
+async def test_package_error(
+    data: bytes,
 ) -> None:
-    msg = b"\x04\x01\x01\xbb\x12\xeb|\xd6\x00"
-    data = await send_data(msg)
-    assert data[0] == 0, data
-    assert data[1] == Socks4Reply.GRANTED, data
+    write_mock = AsyncMock()
+
+    class _FakeConn(Connection):
+        write = write_mock
+
+    with pytest.raises(PackageError):
+        await Socks4()(
+            _FakeConn(),
+            data=data,
+        )
+
+    write_mock.assert_not_called()
 
 
-@mark.asyncio
-async def test_incorrect_protocol(
-    run_socks4_server,  # noqa, pylint: disable=unused-argument
-    send_data,
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ('data',),
+    [
+        pytest.param(
+            b'\x04\x02\x01\xbb\x8e\xfaJ.\x00',
+            id='bind command',
+        ),
+        pytest.param(
+            b'\x04\x00\x01\xbb\x8e\xfaJ.\x00',
+            id='unknown command',
+        ),
+    ],
+)
+async def test_reject_error(
+    data: bytes,
 ) -> None:
-    broken_msg = b"\x05\x01\x01\xbb\x12\xeb|\xd6\x00"
-    data = await send_data(broken_msg)
-    assert not data, data
+    write_mock = AsyncMock()
 
+    class _FakeConn(Connection):
+        _address = Address(ip=IPv4Address(0), port=0)
+        write = write_mock
 
-@mark.asyncio
-async def test_short_package(
-    run_socks4_server,  # noqa, pylint: disable=unused-argument
-    send_data,
-) -> None:
-    broken_msg = b"\x05\x01\x01"
-    data = await send_data(broken_msg)
-    assert not data, data
+    with pytest.raises(RejectError):
+        await Socks4()(
+            _FakeConn(),
+            data=data,
+        )
 
-
-@mark.asyncio
-async def test_not_null_terminated(
-    run_socks4_server,  # noqa, pylint: disable=unused-argument
-    send_data,
-) -> None:
-    broken_msg = b"\x04\x01\x01\xbb\x12\xeb|\xd6\x01"
-    data = await send_data(broken_msg)
-    assert not data, data
+    write_mock.assert_called_once()

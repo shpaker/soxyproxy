@@ -3,7 +3,7 @@ ARG POETRY_VERSION=1.1.7
 WORKDIR /service
 RUN pip install "poetry==$POETRY_VERSION"
 ADD pyproject.toml poetry.lock readme.md ./
-ADD soxyproxy soxyproxy
+ADD _soxyproxy soxyproxy
 RUN poetry build
 RUN python -m venv .venv
 RUN .venv/bin/pip install dist/*.whl

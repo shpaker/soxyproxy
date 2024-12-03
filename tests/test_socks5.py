@@ -1,85 +1,79 @@
-from logging import basicConfig, getLogger
+from ipaddress import IPv4Address
+from unittest.mock import AsyncMock
 
-from httpx import AsyncClient, Response
-from httpx_socks import ProxyError
-from pytest import mark
+import pytest
 
-from soxyproxy.consts import Socks5ConnectionReply
+from soxy import (
+    Address,
+    Connection,
+    RejectError,
+    Resolver,
+    Socks5,
+)
 
-logger = getLogger(__name__)
-basicConfig(level="DEBUG")
+
+class _FakeConn(Connection):
+    read = AsyncMock(
+        return_value=b'\x05\x01\x00\x01\x8e\xfaJ#\x01\xbb',
+    )
 
 
-@mark.asyncio
-async def test_correct_domain_request(
-    run_socks5_server,  # noqa, pylint: disable=unused-argument
-    proxy_transport,
+@pytest.mark.asyncio
+async def test_ok() -> None:
+    results = await Socks5()(
+        _FakeConn(),
+        data=b'\x05\x02\x00\x01',
+    )
+    assert results == (
+        Address(
+            ip=IPv4Address('142.250.74.35'),
+            port=443,
+        ),
+        None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_resolver_ok(
+    resolver: Resolver,
 ) -> None:
-    transport = proxy_transport("socks5")
-    async with AsyncClient(transport=transport) as client:
-        res: Response = await client.get("https://httpbin.org/get")
-        res.raise_for_status()
+    class _FakeConn(Connection):
+        read = AsyncMock(
+            return_value=b'\x05\x01\x00\x03\tgoogle.com\x01\xbb',
+        )
+        write = AsyncMock()
+
+    socks = Socks5(
+        resolver=resolver,
+    )
+    results = await socks(
+        _FakeConn,
+        data=b'\x05\x02\x00\x01',
+    )
+    assert results == (
+        Address(
+            ip=IPv4Address('1.1.1.1'),
+            port=443,
+        ),
+        'google.com',
+    )
 
 
-@mark.asyncio
-async def test_correct_incorrect_domain_request(
-    run_socks5_server,  # noqa, pylint: disable=unused-argument
-    proxy_transport,
+@pytest.mark.asyncio
+async def test_resolver_fail(
+    resolver: Resolver,
 ) -> None:
-    transport = proxy_transport("socks5")
-    async with AsyncClient(transport=transport) as client:
-        try:
-            res: Response = await client.get("https://wbshcbnQOKWPOD.jhbjhbjhbjhbjhb")
-            assert not res
-        except ProxyError as err:
-            assert err
+    class _FakeConn(Connection):
+        read = AsyncMock(
+            return_value=b'\x05\x01\x00\x03\tgoogle.cm\x01\xbb',
+        )
+        write = AsyncMock()
 
-
-@mark.asyncio
-async def test_correct_ip_request(
-    run_socks5_server,  # noqa, pylint: disable=unused-argument
-    proxy_transport,
-) -> None:
-    transport = proxy_transport("socks5")
-    async with AsyncClient(transport=transport) as client:
-        res: Response = await client.get("https://8.8.8.8")
-        res.raise_for_status()
-
-
-@mark.asyncio
-async def test_correct_auth_request(
-    run_socks5_auth_server,  # noqa, pylint: disable=unused-argument
-    proxy_transport,
-) -> None:
-    transport = proxy_transport("socks5", "someuser", "mypass")
-    async with AsyncClient(transport=transport) as client:
-        res: Response = await client.get("https://httpbin.org/get")
-        res.raise_for_status()
-
-
-@mark.asyncio
-async def test_incorrect_auth_request(
-    run_socks5_auth_server,  # noqa, pylint: disable=unused-argument
-    proxy_transport,
-) -> None:
-    transport = proxy_transport("socks5", "qwerty", "asdfg")
-    async with AsyncClient(transport=transport) as client:
-        try:
-            res: Response = await client.get("https://httpbin.org/get")
-            res.raise_for_status()
-        except ProxyError:
-            pass
-
-
-@mark.asyncio
-async def test_incorrect_request(
-    run_socks5_server,  # noqa, pylint: disable=unused-argument
-    proxy_transport,
-) -> None:
-    transport = proxy_transport("socks5")
-    async with AsyncClient(transport=transport) as client:
-        try:
-            res: Response = await client.get("https://127.0.0.1:9449/get")
-            res.raise_for_status()
-        except ProxyError as err:
-            assert err.error_code == Socks5ConnectionReply.HOST_UNREACHABLE
+    socks = Socks5(
+        resolver=resolver,
+    )
+    with pytest.raises(RejectError):
+        await socks(
+            _FakeConn,
+            data=b'\x05\x02\x00\x01',
+        )
