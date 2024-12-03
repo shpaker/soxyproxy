@@ -11,7 +11,7 @@ authors = [
 ]
 classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Topic :: Internet :: Proxy Servers",
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3 :: Only",
