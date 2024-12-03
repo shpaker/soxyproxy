@@ -1,11 +1,13 @@
 from soxy._config import Config
 from soxy._errors import (
     AuthorizationError,
+    ConfigError,
     PackageError,
     ProtocolError,
     RejectError,
     ResolveDomainError,
 )
+from soxy._logger import logger
 from soxy._proxy import Proxy
 from soxy._ruleset import Rule, Ruleset
 from soxy._socks import Socks4, Socks5
@@ -26,6 +28,7 @@ __all__ = [
     'Address',
     'AuthorizationError',
     'Config',
+    'ConfigError',
     'Connection',
     'PackageError',
     'ProtocolError',
@@ -38,4 +41,5 @@ __all__ = [
     'Socks4',
     'Socks5',
     'TcpTransport',
+    'logger',
 ]

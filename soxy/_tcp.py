@@ -34,7 +34,10 @@ class TCPConnection(
         exc_traceback: types.TracebackType | None,
     ) -> None:
         self._writer.close()
-        await self._writer.wait_closed()
+        try:
+            await self._writer.wait_closed()
+        except ConnectionError:
+            return
 
     @classmethod
     async def open(
