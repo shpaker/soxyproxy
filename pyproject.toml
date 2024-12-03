@@ -5,6 +5,28 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
+license = {file = "LICENSE"}
+authors = [
+    {name = "Aleksandr Shpak", email = "shpaker@gmail.com"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+keywords = ["proxy", "socks", "socks4", "socks4a", "socks4", "socks5h"]
+
+[project.urls]
+Homepage = "https://github.com/shpaker/soxyproxy/"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["soxy"]
 
 [dependency-groups]
 dev = [
