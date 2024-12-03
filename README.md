@@ -16,16 +16,16 @@ pip install soxyproxy
 import asyncio
 from ipaddress import IPv4Address, IPv4Network
 
-from soxy import TcpTransport, Proxy, Ruleset, Rule, Socks5
+import soxy
 
 
 async def async_main() -> None:
-  async with Proxy(
-    protocol=Socks5(),
-    transport=TcpTransport(),
-    ruleset=Ruleset(
+  async with soxy.Proxy(
+    protocol=soxy.Socks5(),
+    transport=soxy.TcpTransport(),
+    ruleset=soxy.Ruleset(
       allow_rules=[
-        Rule(
+        soxy.Rule(
           from_addresses=IPv4Address("127.0.0.1"),
           to_addresses=IPv4Network("0.0.0.0/0"),
         ),
