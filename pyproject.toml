@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
-license = "GPLv3"
+license = "GPL-3.0"
 authors = [
   { name = "Aleksandr Shpak", email = "shpaker@gmail.com" },
 ]
