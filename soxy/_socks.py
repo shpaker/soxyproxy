@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from ipaddress import IPV4LENGTH, IPV6LENGTH, IPv4Address, IPv6Address
 
 from soxy._errors import (
+    AuthorizationError,
     PackageError,
     RejectError,
     ResolveDomainError,
@@ -209,9 +210,7 @@ class Socks4(
         if not username:
             if self._auther:
                 raise await self.reject(
-                    client,
-                    reply=Socks4Reply.IDENTD_REJECTED,
-                    destination=destination,
+                    client=client,
                 )
             return
         if self._auther is None:
@@ -221,10 +220,13 @@ class Socks4(
             logger.info(f'{self} {username} authorized')
             return
         logger.info(f'{self} fail to authorize {username}')
-        raise await self.reject(
-            client,
+        await self.send(
+            client=client,
             reply=Socks4Reply.IDENTD_REJECTED,
             destination=destination,
+        )
+        raise AuthorizationError(
+            username=username,
         )
 
 
@@ -346,7 +348,9 @@ class Socks5(
     ) -> None:
         data = await client.read()
         if not data:
-            return
+            raise PackageError(
+                data=data,
+            )
         try:
             auth_version = data[0]
             username_len = data[1]
@@ -360,11 +364,15 @@ class Socks5(
         if self._auther is None:
             raise RuntimeError
         is_auth = await self._auther(username, password)
-        if is_auth:
+        if is_auth is True:
             logger.info(f'{self} {username} authorized')
+            await client.write(socks5_authorization_pack_response(is_auth))
             return
         logger.info(f'{self} fail to authorize {username}')
         await client.write(socks5_authorization_pack_response(is_auth))
+        raise AuthorizationError(
+            username=username,
+        )
 
     async def _connect(
         self,
@@ -432,7 +440,8 @@ class Socks5(
                 None,
             )
         if address_type == Socks5AddressType.DOMAIN:
-            domain_name = data[5 : 6 + data[4]].decode()
+            domain_name_len = data[4]
+            domain_name = data[5 : 5 + domain_name_len].decode()
             if not self._resolver:
                 raise await self.reject(
                     reply=Socks5ConnectionReply.ADDRESS_TYPE_NOT_SUPPORTED,

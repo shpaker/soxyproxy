@@ -72,6 +72,7 @@ class TcpTransport(
         self._address = (host, port)
         self._on_client_connected_cb: typing.Callable[[Connection], typing.Awaitable[Address | None]] | None = None
         self._start_messaging_cb: typing.Callable[[Connection, Connection], typing.Awaitable[None]] | None = None
+        self._on_remote_unreachable_cb: typing.Callable[[Connection, Address], typing.Awaitable[None]] | None = None
 
     def init(
         self,
@@ -83,9 +84,14 @@ class TcpTransport(
             [Connection, Connection],
             typing.Awaitable[None],
         ],
+        on_remote_unreachable_cb: typing.Callable[
+            [Connection, Address],
+            typing.Awaitable[None],
+        ],
     ) -> None:
         self._on_client_connected_cb = on_client_connected_cb
         self._start_messaging_cb = start_messaging_cb
+        self._on_remote_unreachable_cb = on_remote_unreachable_cb
 
     async def __aenter__(
         self,
@@ -109,17 +115,25 @@ class TcpTransport(
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
-        if self._on_client_connected_cb is None or self._start_messaging_cb is None:
+        if (
+            self._on_client_connected_cb is None
+            or self._start_messaging_cb is None
+            or self._on_remote_unreachable_cb is None
+        ):
             msg = f'please initialize {self.__class__.__name__}'
-            raise TypeError(msg)
+            raise RuntimeError(msg)
         async with TCPConnection(
             reader=reader,
             writer=writer,
         ) as client:
             if not (destination := await self._on_client_connected_cb(client)):
                 return
-            async with await TCPConnection.open(
-                host=str(destination.ip),
-                port=destination.port,
-            ) as remote:
-                await self._start_messaging_cb(client, remote)
+            try:
+                async with await TCPConnection.open(
+                    host=str(destination.ip),
+                    port=destination.port,
+                ) as remote:
+                    await self._start_messaging_cb(client, remote)
+            except OSError:
+                await self._on_remote_unreachable_cb(client, destination)
+                return

@@ -5,7 +5,7 @@ from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 from pathlib import Path
 
 from soxy._errors import ConfigError
-from soxy._ruleset import Rule, Ruleset
+from soxy._ruleset import ProxyingRule, Ruleset
 from soxy._socks import Socks4, Socks5
 from soxy._tcp import TcpTransport
 from soxy._types import Transport
@@ -69,7 +69,7 @@ class Config:
     def _make_rules(
         self,
         rules: list[dict[str, typing.Any]],
-    ) -> typing.Generator[Rule, None, None]:
+    ) -> typing.Generator[ProxyingRule, None, None]:
         for rule_dict in rules:
             to_ = rule_dict.get('to')
             with suppress(ValueError):
@@ -86,7 +86,7 @@ class Config:
                 )
             ):
                 continue
-            yield Rule(
+            yield ProxyingRule(
                 from_addresses=from_,
                 to_addresses=to_,
             )
@@ -95,12 +95,16 @@ class Config:
     def ruleset(
         self,
     ) -> Ruleset:
+        connecting = self._ruleset_data.get('connecting', {})
+        proxying = self._ruleset_data.get('proxying', {})
         return Ruleset(
-            allow_rules=list(
-                self._make_rules(self._ruleset_data.get('allow', [])),
+            allow_connecting_rules=list(connecting.get('allow', [])),
+            block_connecting_rules=list(connecting.get('block', [])),
+            allow_proxying_rules=list(
+                self._make_rules(proxying.get('allow', [])),
             ),
-            block_rules=list(
-                self._make_rules(self._ruleset_data.get('block', [])),
+            block_proxying_rules=list(
+                self._make_rules(proxying.get('block', [])),
             ),
         )
 

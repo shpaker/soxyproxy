@@ -39,7 +39,7 @@ async def test_resolver_ok(
 ) -> None:
     class _FakeConn(Connection):
         read = AsyncMock(
-            return_value=b'\x05\x01\x00\x03\tgoogle.com\x01\xbb',
+            return_value=b'\x05\x01\x00\x03\ngoogle.com\x01\xbb',
         )
         write = AsyncMock()
 
@@ -65,7 +65,7 @@ async def test_resolver_fail(
 ) -> None:
     class _FakeConn(Connection):
         read = AsyncMock(
-            return_value=b'\x05\x01\x00\x03\tgoogle.cm\x01\xbb',
+            return_value=b'\x05\x01\x00\x03\tgoogle.com\x01\xbb',
         )
         write = AsyncMock()
 

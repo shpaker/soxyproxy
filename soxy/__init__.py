@@ -9,7 +9,7 @@ from soxy._errors import (
 )
 from soxy._logger import logger
 from soxy._proxy import Proxy
-from soxy._ruleset import Rule, Ruleset
+from soxy._ruleset import ConnectingRule, ProxyingRule, Ruleset
 from soxy._socks import Socks4, Socks5
 from soxy._tcp import TcpTransport
 from soxy._types import (
@@ -29,14 +29,15 @@ __all__ = [
     'AuthorizationError',
     'Config',
     'ConfigError',
+    'ConnectingRule',
     'Connection',
     'PackageError',
     'ProtocolError',
     'Proxy',
+    'ProxyingRule',
     'RejectError',
     'ResolveDomainError',
     'Resolver',
-    'Rule',
     'Ruleset',
     'Socks4',
     'Socks5',

@@ -1,5 +1,3 @@
-import typing
-
 from soxy._logger import logger
 from soxy._types import (
     Address,
@@ -7,9 +5,32 @@ from soxy._types import (
     IPvAnyAddress,
     IPvAnyNetwork,
 )
+from soxy._utils import match_addresses
 
 
-class Rule:
+class ConnectingRule:
+    def __init__(
+        self,
+        from_addresses: IPvAnyAddress | IPvAnyNetwork,
+    ) -> None:
+        self._from_addresses = from_addresses
+
+    def __call__(
+        self,
+        client: Connection,
+    ) -> bool:
+        return match_addresses(
+            address=client.address,
+            math_with=self._from_addresses,
+        )
+
+    def __repr__(
+        self,
+    ) -> str:
+        return f'<{self.__class__.__name__}: {self._from_addresses}>'
+
+
+class ProxyingRule:
     def __init__(
         self,
         from_addresses: IPvAnyAddress | IPvAnyNetwork,
@@ -17,18 +38,6 @@ class Rule:
     ) -> None:
         self._from_addresses = from_addresses
         self._to_addresses = to_addresses
-
-    @staticmethod
-    def _match_addresses(
-        destination: Address,
-        math_with: IPvAnyAddress | IPvAnyNetwork,
-    ) -> bool:
-        result = False
-        if isinstance(math_with, typing.get_args(IPvAnyAddress.__value__)):
-            result = destination.ip == math_with
-        if isinstance(math_with, typing.get_args(IPvAnyNetwork.__value__)):
-            result = destination.ip in math_with
-        return result
 
     def __call__(
         self,
@@ -38,11 +47,11 @@ class Rule:
     ) -> bool:
         if isinstance(self._to_addresses, str):
             return not (not isinstance(domain_name, str) or domain_name != self._to_addresses)
-        return self._match_addresses(
-            destination=client.address,
+        return match_addresses(
+            address=client.address,
             math_with=self._from_addresses,
-        ) and self._match_addresses(
-            destination=destination,
+        ) and match_addresses(
+            address=destination,
             math_with=self._to_addresses,
         )
 
@@ -55,20 +64,48 @@ class Rule:
 class Ruleset:
     def __init__(
         self,
-        allow_rules: list[Rule] | None = None,
-        block_rules: list[Rule] | None = None,
+        allow_connecting_rules: list[ConnectingRule],
+        allow_proxying_rules: list[ProxyingRule],
+        block_connecting_rules: list[ConnectingRule] | None = None,
+        block_proxying_rules: list[ProxyingRule] | None = None,
     ) -> None:
-        self._allow_rules = allow_rules or []
-        self._block_rules = block_rules or []
+        self._allow_connecting_rules = allow_connecting_rules or []
+        self._block_connecting_rules: list[ConnectingRule] = block_connecting_rules or []
+        self._allow_proxying_rules = allow_proxying_rules or []
+        self._block_proxying_rules: list[ProxyingRule] = block_proxying_rules or []
 
-    def __call__(
+    def should_allow_connecting(
+        self,
+        client: Connection,
+    ) -> bool:
+        result = None
+        for rule in self._allow_connecting_rules:
+            if result := rule(
+                client=client,
+            ):
+                logger.info(f'{client} connecting ALLOWED: {rule}')
+                break
+        for rule in self._block_connecting_rules:
+            if result := rule(
+                client=client,
+            ):
+                logger.info(f'{client} connecting BLOCKED: {rule}')
+                return False
+        if result is None:
+            result = False
+            logger.info(
+                f'{client} not found allow-connecting-rule',
+            )
+        return result
+
+    def should_allow_proxying(
         self,
         client: Connection,
         destination: Address,
         domain_name: str | None,
     ) -> bool:
         result = None
-        for rule in self._allow_rules:
+        for rule in self._allow_proxying_rules:
             if result := rule(
                 client=client,
                 destination=destination,
@@ -76,7 +113,7 @@ class Ruleset:
             ):
                 logger.info(f'{client} request ALLOWED by {rule}')
                 break
-        for rule in self._block_rules:
+        for rule in self._block_proxying_rules:
             if result := rule(
                 client=client,
                 destination=destination,

@@ -16,24 +16,51 @@
 pip install soxyproxy
 ```
 
-## 🫶🏼  Usage
+## 🫶🏼  Пробуем
 
-### 👨‍💻 Используем из кода
+### 👨‍💻 Запускаем из кода
 
 ```python
 import asyncio
+import logging
 from ipaddress import IPv4Address, IPv4Network
+from socket import gethostbyname
 
 import soxy
 
+logging.basicConfig(level=logging.INFO)
 
-async def async_main() -> None:
+
+def auther(
+  username: str,
+  password: str,
+) -> bool:
+  return username == "top" and password == "secret"
+
+
+def resolver(
+  domain_name: str,
+) -> IPv4Address:
+  return IPv4Address(gethostbyname(domain_name))
+
+
+async def main() -> None:
   async with soxy.Proxy(
-    protocol=soxy.Socks5(),
+    protocol=soxy.Socks5(
+      auther=auther,
+      resolver=resolver,  # если резолвер не передать, то не будет работать 5h (и 4a в случае Socks4)
+    ),
     transport=soxy.TcpTransport(),
     ruleset=soxy.Ruleset(
-      allow_rules=[
-        soxy.Rule(
+      allow_connecting_rules=[
+        # необходимо хотя бы одно разрешающие правило для соединения
+        soxy.ConnectingRule(
+          from_addresses=IPv4Address("127.0.0.1"),
+        )
+      ],
+      allow_proxying_rules=[
+        # необходимо хотя бы одно разрешающие правило для проксирования
+        soxy.ProxyingRule(
           from_addresses=IPv4Address("127.0.0.1"),
           to_addresses=IPv4Network("0.0.0.0/0"),
         ),
@@ -44,10 +71,26 @@ async def async_main() -> None:
 
 
 if __name__ == "__main__":
-  asyncio.run(async_main())
+  asyncio.run(main())
+```
+
+#### Проверить всегда можно курлом
+
+socks5:
+
+```shell
+curl -x "socks5://top:secret@127.0.0.1:1080" https://google.ru -v
+```
+
+socks5h:
+
+```shell
+curl -x "socks5a://top:secret@127.0.0.1:1080" https://google.ru -v
 ```
 
 ### 👟  В качестве инструмента коммандной строки
+
+Но тут все очень просто
 
 #### пишем конфиг следующего вида и сохарняем в `socks5.toml`:
 
@@ -55,17 +98,19 @@ if __name__ == "__main__":
 [proxy]
 protocol = "socks5"
 transport = "tcp"
+clients_from = [
+  '0.0.0.0/0',
+]
 
 [transport]
-host = "127.0.0.1"
+host = '127.0.0.1'
 port = 1080
 
-[[ruleset.allow]]
-from = "127.0.0.1"
-to = "0.0.0.0/0"
+[[ruleset.connecting.allow]]
+from = '127.0.0.1'
 
-[[ruleset.allow]]
-from = "192.168.0.2"
+[[ruleset.proxying.allow]]
+from = "127.0.0.1"
 to = "0.0.0.0/0"
 ```
 

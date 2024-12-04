@@ -5,6 +5,7 @@ import pytest
 
 from soxy import (
     Address,
+    AuthorizationError,
     Connection,
     PackageError,
     RejectError,
@@ -56,7 +57,7 @@ async def test_auther_fail() -> None:
     socks = Socks4(
         auther=lambda name: name == 'foo',
     )
-    with pytest.raises(RejectError):
+    with pytest.raises(AuthorizationError):
         await socks(
             _FakeConn(),
             data=b'\x04\x01\x01\xbb\xac\xd9\x15\xa3bar\x00',

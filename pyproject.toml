@@ -5,19 +5,19 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 authors = [
-    {name = "Aleksandr Shpak", email = "shpaker@gmail.com"},
+  { name = "Aleksandr Shpak", email = "shpaker@gmail.com" },
 ]
 classifiers = [
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    "Topic :: Internet :: Proxy Servers",
-    "Development Status :: 3 - Alpha",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Topic :: Internet :: Proxy Servers",
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 keywords = ["proxy", "socks", "socks4", "socks4a", "socks4", "socks5h"]
 
@@ -50,6 +50,9 @@ exclude = [
   ".venv",
 ]
 lint.flake8-tidy-imports.ban-relative-imports = "all"
+lint.ignore = [
+  "S101", # Too many arguments to function call
+]
 lint.select = [
   "F", # Pyflakes
   "C90", # mccabe

@@ -136,6 +136,10 @@ class Transport(
             [Connection, Connection],
             typing.Awaitable[None],
         ],
+        on_remote_unreachable_cb: typing.Callable[
+            [Connection, Address],
+            typing.Awaitable[None],
+        ],
     ) -> None: ...
 
     def __repr__(

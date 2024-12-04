@@ -11,26 +11,30 @@ from soxy._errors import (
 )
 from soxy._logger import logger
 from soxy._ruleset import Ruleset
-from soxy._tcp import TcpTransport
-from soxy._types import Address, Connection, ProxySocks, Transport
+from soxy._types import (
+    Address,
+    Connection,
+    ProxySocks,
+    Transport,
+)
 
 
 class Proxy:
     def __init__(
         self,
         protocol: ProxySocks,
-        transport: Transport | None = None,
-        ruleset: Ruleset | None = None,
+        ruleset: Ruleset,
+        transport: Transport,
     ) -> None:
         self._protocol = protocol
-        transport = transport if transport is not None else TcpTransport()
         transport.init(
             on_client_connected_cb=self._on_client_connected_transport_cb,
             start_messaging_cb=self._start_messaging_transport_cb,
+            on_remote_unreachable_cb=self._on_remote_connection_unreachable_cb,
         )
         logger.info(f'initialized {transport} for {protocol}')
         self._transport = transport
-        self._ruleset = ruleset if ruleset is not None else Ruleset()
+        self._ruleset = ruleset
 
     async def __aenter__(
         self,
@@ -67,6 +71,13 @@ class Proxy:
         client: Connection,
     ) -> Address | None:
         logger.info(f'{client} client connected')
+        if (
+            self._ruleset.should_allow_connecting(
+                client=client,
+            )
+            is False
+        ):
+            return None
         if not (data := await client.read()):
             return None
         try:
@@ -77,7 +88,7 @@ class Proxy:
         except ProtocolError as exc:
             logger.info(f'{client} protocol error ({exc.__class__.__name__})')
             return None
-        if self._ruleset(
+        if self._ruleset.should_allow_proxying(
             client=client,
             destination=address,
             domain_name=domain_name,
@@ -136,3 +147,14 @@ class Proxy:
         logger.info(
             f'{client} stop messaging with {remote} (duration {datetime.now() - started_at})',
         )
+
+    async def _on_remote_connection_unreachable_cb(
+        self,
+        client: Connection,
+        destination: Address,
+    ) -> None:
+        await self._protocol.target_unreachable(
+            client=client,
+            destination=destination,
+        )
+        logger.info(f'{client} remote {destination.ip}:{destination.port} unreachable')

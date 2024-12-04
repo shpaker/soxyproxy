@@ -1,5 +1,19 @@
+import typing
+
 from soxy._errors import PackageError
-from soxy._types import SocksVersions
+from soxy._types import Address, IPvAnyAddress, IPvAnyNetwork, SocksVersions
+
+
+def match_addresses(
+    address: Address,
+    math_with: IPvAnyAddress | IPvAnyNetwork,
+) -> bool:
+    result = False
+    if isinstance(math_with, typing.get_args(IPvAnyAddress.__value__)):
+        result = address.ip == math_with
+    if isinstance(math_with, typing.get_args(IPvAnyNetwork.__value__)):
+        result = address.ip in math_with
+    return result
 
 
 def port_from_bytes(
