@@ -78,10 +78,8 @@ class Proxy:
             is False
         ):
             return None
-        if not (data := await client.read()):
-            return None
         try:
-            address, domain_name = await self._protocol(client, data)
+            address, domain_name = await self._protocol(client)
         except PackageError as exc:
             logger.info(f'{client} package error ({exc.data!r})')
             return None

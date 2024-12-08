@@ -66,9 +66,9 @@ class Socks5Command(
 class Socks5AddressType(
     enum.IntEnum,
 ):
-    IPV4 = 1
+    IPv4 = 1
     DOMAIN = 3
-    IPV6 = 4
+    IPv6 = 4
 
 
 class Socks5ConnectionReply(
