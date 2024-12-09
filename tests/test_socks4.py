@@ -133,6 +133,10 @@ async def test_auther_and_resolver_ok(
             b'\x04\x01\x01\xbb\x8e\xfaJ.\x01',
             id='reserved not null',
         ),
+        pytest.param(
+            b'\x04\x00\x01\xbb\x8e\xfaJ.\x00',
+            id='unknown command',
+        ),
     ],
 )
 async def test_package_error(
@@ -159,10 +163,6 @@ async def test_package_error(
         pytest.param(
             b'\x04\x02\x01\xbb\x8e\xfaJ.\x00',
             id='bind command',
-        ),
-        pytest.param(
-            b'\x04\x00\x01\xbb\x8e\xfaJ.\x00',
-            id='unknown command',
         ),
     ],
 )

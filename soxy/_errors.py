@@ -1,3 +1,5 @@
+from ipaddress import IPv4Address
+
 from soxy._types import Address
 
 
@@ -67,8 +69,13 @@ class RejectError(
 ):
     def __init__(
         self,
-        address: Address,
+        address: Address | None = None,
     ) -> None:
+        if address is None:
+            address = Address(
+                ip=IPv4Address(0),
+                port=0,
+            )
         self._address = address
 
     @property
