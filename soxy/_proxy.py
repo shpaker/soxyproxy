@@ -1,8 +1,6 @@
 import asyncio
 import types
 import typing
-from datetime import datetime
-from traceback import print_exc
 
 from soxy._config import Config
 from soxy._errors import (
@@ -103,47 +101,9 @@ class Proxy:
         client: Connection,
         remote: Connection,
     ) -> None:
-        logger.info(f'{client} remote connection opened: {remote}')
         await self._protocol.success(
             client=client,
             destination=remote.address,
-        )
-        logger.info(f'{client} start messaging with {remote}')
-        tasks: dict[Connection, asyncio.Task[bytes]] = {
-            client: asyncio.create_task(client.read()),
-            remote: asyncio.create_task(remote.read()),
-        }
-        conns = set(tasks.keys())
-        closed = False
-        started_at = datetime.now()
-        while not closed:
-            try:
-                done, _ = await asyncio.wait(
-                    tasks.values(),
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-            except TimeoutError:
-                print_exc()
-                break
-            for conn, task in tasks.items():
-                if task not in done:
-                    continue
-                another: Connection = (conns - {conn}).pop()
-                data = task.result()
-                if not data:
-                    closed = True
-                    break
-                tasks[conn] = asyncio.create_task(conn.read())
-                await another.write(data)
-                if conn is client:
-                    logger.info(f'{client} -> {len(data)} bytes -> {remote}')
-                else:
-                    logger.info(f'{client} <- {len(data)} bytes <- {remote}')
-        for task in tasks.values():
-            if not task.cancelled():
-                task.cancel()
-        logger.info(
-            f'{client} stop messaging with {remote} (duration {datetime.now() - started_at})',
         )
 
     async def _on_remote_connection_unreachable_cb(

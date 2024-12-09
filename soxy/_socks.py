@@ -1,6 +1,5 @@
 import typing
 from abc import ABC, abstractmethod
-from ipaddress import IPv4Address, IPv6Address
 
 from soxy._errors import (
     AuthorizationError,
@@ -31,6 +30,9 @@ from soxy._types import (
     Socks5ConnectionReply,
 )
 from soxy._wrappers import auther_wrapper, resolver_wrapper
+
+if typing.TYPE_CHECKING:
+    from ipaddress import IPv4Address
 
 
 class _BaseSocks(
@@ -234,42 +236,32 @@ class Socks5(
         )
         await greetings_response.to_client()
         if greetings_response.method is Socks5AuthMethod.NO_ACCEPTABLE:
-            raise await self.reject_error(
-                client=greetings_request.client,
-            )
+            await Socks5ConnectionResponse(
+                client=client,
+                reply=Socks5ConnectionReply.CONNECTION_REFUSED,
+            ).to_client()
+            raise RejectError
         if self._auther:
             authorization_request = await Socks5AuthorizationRequest.from_client(client)
-            response = await self._authorization(await Socks5AuthorizationRequest.from_client(client))
+            response = await self._authorization(authorization_request)
             await response.to_client()
             if not response.is_success:
                 raise AuthorizationError(
                     username=authorization_request.username,
                 )
-        return await self._connect(
-            await Socks5ConnectionRequest.from_client(client),
-        )
-
-    async def reject_error(
-        self,
-        client: Connection,
-        destination: str | IPv4Address | IPv6Address | None = None,
-        port: int = 0,
-        reply: Socks5ConnectionReply = Socks5ConnectionReply.CONNECTION_REFUSED,
-    ) -> RejectError:
-        address = (
-            Address(ip=IPv4Address(0), port=port)
-            if destination is None or isinstance(destination, str)
-            else Address(ip=destination, port=port)
-        )
-        await Socks5ConnectionResponse(
-            client=client,
-            reply=reply,
-            destination=address.ip,
-            port=port,
-        ).to_client()
-        return RejectError(
-            address=address,
-        )
+        try:
+            data = await self._connect(
+                await Socks5ConnectionRequest.from_client(client),
+            )
+        except RejectError as exc:
+            await Socks5ConnectionResponse(
+                client=client,
+                reply=Socks5ConnectionReply.CONNECTION_REFUSED,
+                destination=exc.address.ip,
+                port=exc.address.port,
+            ).to_client()
+            raise
+        return data
 
     async def ruleset_reject(
         self,
@@ -345,24 +337,18 @@ class Socks5(
         self,
         request: Socks5ConnectionRequest,
     ) -> tuple[Address, str | None]:
-        reject_error = await self.reject_error(
-            client=request.client,
-            reply=Socks5ConnectionReply.ADDRESS_TYPE_NOT_SUPPORTED,
-            destination=(request.destination.ip if request.destination else request.domain_name),
-            port=request.port,
-        )
         if request.domain_name is None:
             if request.destination is None:
-                raise reject_error
+                raise RejectError
             return request.destination, None
         if self._resolver is None:
-            raise reject_error
+            raise RejectError
         if (
             resolved := await self._resolver(
                 request.domain_name,
             )
         ) is None:
-            raise reject_error
+            raise RejectError
         return (
             Address(
                 ip=resolved,

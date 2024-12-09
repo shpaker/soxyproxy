@@ -3,6 +3,7 @@ import types
 import typing
 from ipaddress import IPv4Address
 
+from soxy._session import Session
 from soxy._types import Address, Connection, Transport
 
 
@@ -134,6 +135,11 @@ class TcpTransport(
                     port=destination.port,
                 ) as remote:
                     await self._start_messaging_cb(client, remote)
+                    async with Session(
+                        client=client,
+                        remote=remote,
+                    ) as session:
+                        await session.start()
             except OSError:
                 await self._on_remote_unreachable_cb(client, destination)
                 return

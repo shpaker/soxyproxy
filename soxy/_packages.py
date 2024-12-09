@@ -320,20 +320,20 @@ class Socks5AuthorizationRequest(
     ) -> None:
         self._username: str | None = None
         self._password: str | None = None
+        super().__init__(
+            client=client,
+            data=data,
+        )
         try:
             self._username_length = data[1]
             self._password_length = data[2 + self._username_length]
         except IndexError as exc:
             raise PackageError(self.data) from exc
-        super().__init__(
-            client=client,
-            data=data,
-        )
 
     def _validate(
         self,
     ) -> bool:
-        return self._data[0] != 1
+        return self._data[0] == 1
 
     @property
     def username(
@@ -512,9 +512,11 @@ class Socks5ConnectionResponse(
         self,
         client: Connection,
         reply: Socks5ConnectionReply,
-        destination: str | IPv4Address | IPv6Address,
-        port: int,
+        destination: str | IPv4Address | IPv6Address | None = None,
+        port: int = 0,
     ) -> None:
+        if destination is None:
+            destination = IPv4Address(0)
         self._reply = reply
         self._destination = destination
         self._port = port
