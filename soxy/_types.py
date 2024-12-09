@@ -168,7 +168,6 @@ class ProxySocks(
     async def __call__(
         self,
         client: Connection,
-        data: bytes,
     ) -> tuple[Address, str | None]: ...
 
     async def ruleset_reject(

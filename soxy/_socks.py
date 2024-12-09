@@ -127,23 +127,22 @@ class Socks4(
                 destination=request.destination,
             ).to_client()
             raise RejectError(address=request.destination)
-        if not request.is_socks4a and not request.username:
-            if self._auther:
-                await Socks4Response(
-                    client=client,
-                    reply=Socks4Reply.REJECTED,
-                    destination=request.destination,
-                ).to_client()
-                raise RejectError(address=request.destination)
-            return request.destination, None
         if not request.is_socks4a:
-            await self._authorization(
-                client=client,
-                username=request.username,
-                destination=request.destination,
-            )
+            if self._auther:
+                if not request.username:
+                    await Socks4Response(
+                        client=client,
+                        reply=Socks4Reply.REJECTED,
+                        destination=request.destination,
+                    ).to_client()
+                    raise RejectError(address=request.destination)
+                await self._authorization(
+                    client=client,
+                    username=request.username,
+                    destination=request.destination,
+                )
             return request.destination, None
-        if self._resolver is None:
+        if not (self._resolver and request.domain_name):
             await Socks4Response(
                 client=client,
                 reply=Socks4Reply.REJECTED,
@@ -229,15 +228,23 @@ class Socks5(
         self,
         client: Connection,
     ) -> tuple[Address, str | None]:
-        greetings_response = self._greetings(await Socks5GreetingRequest.from_client(client))
+        greetings_request = await Socks5GreetingRequest.from_client(client)
+        greetings_response = self._greetings(
+            request=greetings_request,
+        )
         await greetings_response.to_client()
         if greetings_response.method is Socks5AuthMethod.NO_ACCEPTABLE:
-            raise AuthorizationError
+            raise await self.reject_error(
+                client=greetings_request.client,
+            )
         if self._auther:
+            authorization_request = await Socks5AuthorizationRequest.from_client(client)
             response = await self._authorization(await Socks5AuthorizationRequest.from_client(client))
             await response.to_client()
             if not response.is_success:
-                raise AuthorizationError
+                raise AuthorizationError(
+                    username=authorization_request.username,
+                )
         return await self._connect(
             await Socks5ConnectionRequest.from_client(client),
         )
@@ -245,22 +252,23 @@ class Socks5(
     async def reject_error(
         self,
         client: Connection,
-        address: str | IPv4Address | IPv6Address,
-        port: int,
+        destination: str | IPv4Address | IPv6Address | None = None,
+        port: int = 0,
         reply: Socks5ConnectionReply = Socks5ConnectionReply.CONNECTION_REFUSED,
     ) -> RejectError:
+        address = (
+            Address(ip=IPv4Address(0), port=port)
+            if destination is None or isinstance(destination, str)
+            else Address(ip=destination, port=port)
+        )
         await Socks5ConnectionResponse(
             client=client,
             reply=reply,
-            destination=address,
+            destination=address.ip,
             port=port,
         ).to_client()
         return RejectError(
-            address=(
-                Address(ip=address, port=port)
-                if not isinstance(address, str)
-                else Address(ip=IPv4Address(0), port=port)
-            ),
+            address=address,
         )
 
     async def ruleset_reject(
@@ -337,29 +345,28 @@ class Socks5(
         self,
         request: Socks5ConnectionRequest,
     ) -> tuple[Address, str | None]:
-        if request.domain_name:
-            if not self._auther:
-                raise await self.reject_error(
-                    client=request.client,
-                    reply=Socks5ConnectionReply.ADDRESS_TYPE_NOT_SUPPORTED,
-                    address=request.destination or request.domain_name,
-                    port=request.port,
-                )
-            if (
-                resolved := await self._resolver(
-                    request.domain_name,
-                )
-            ) is False:
-                raise await self.reject_error(
-                    client=request.client,
-                    address=request.destination or request.domain_name,
-                    port=request.port,
-                )
-            return (
-                Address(
-                    ip=resolved,
-                    port=request.port,
-                ),
+        reject_error = await self.reject_error(
+            client=request.client,
+            reply=Socks5ConnectionReply.ADDRESS_TYPE_NOT_SUPPORTED,
+            destination=(request.destination.ip if request.destination else request.domain_name),
+            port=request.port,
+        )
+        if request.domain_name is None:
+            if request.destination is None:
+                raise reject_error
+            return request.destination, None
+        if self._resolver is None:
+            raise reject_error
+        if (
+            resolved := await self._resolver(
                 request.domain_name,
             )
-        return request.destination, None
+        ) is None:
+            raise reject_error
+        return (
+            Address(
+                ip=resolved,
+                port=request.port,
+            ),
+            request.domain_name,
+        )

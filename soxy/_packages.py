@@ -94,7 +94,10 @@ class Socks4Request(
         client: Connection,
         data: bytes,
     ) -> None:
-        self._destination = self._is_socks4a = self._username = self._domain_name = None
+        self._destination: Address | None = None
+        self._is_socks4a: bool | None = None
+        self._username: str | None = None
+        self._domain_name: str | None = None
         super().__init__(
             client=client,
             data=data,
@@ -231,7 +234,8 @@ class Socks5GreetingRequest(
         client: Connection,
         data: bytes,
     ) -> None:
-        self._methods = self._methods_num = None
+        self._methods: list[Socks5AuthMethod] | None = None
+        self._methods_num: int | None = None
         super().__init__(
             client=client,
             data=data,
@@ -314,7 +318,8 @@ class Socks5AuthorizationRequest(
         client: Connection,
         data: bytes,
     ) -> None:
-        self._username = self._password = None
+        self._username: str | None = None
+        self._password: str | None = None
         try:
             self._username_length = data[1]
             self._password_length = data[2 + self._username_length]
@@ -390,7 +395,11 @@ class Socks5ConnectionRequest(
         client: Connection,
         data: bytes,
     ) -> None:
-        self._command = self._address_type = self._destination = self._domain_name = self._port = None
+        self._command: Socks5Command | None = None
+        self._address_type: Socks5AddressType | None = None
+        self._destination: Address | None = None
+        self._domain_name: str | None = None
+        self._port: int | None = None
         super().__init__(
             client=client,
             data=data,
@@ -426,6 +435,7 @@ class Socks5ConnectionRequest(
             self._command = Socks5Command(self.data[1])
         except ValueError as exc:
             raise PackageError(self.data) from exc
+        return self._command
 
     @property
     def address_type(
@@ -468,8 +478,8 @@ class Socks5ConnectionRequest(
     @property
     def destination(
         self,
-    ) -> Address:
-        if self._destination or self.address_type is Socks5AddressType.DOMAIN:
+    ) -> Address | None:
+        if self._destination is not None or self.address_type is Socks5AddressType.DOMAIN:
             return self._destination
         try:
             port = port_from_bytes(self._data[-2:])
