@@ -263,18 +263,6 @@ class Socks5(
             raise
         return data
 
-    async def ruleset_reject(
-        self,
-        client: Connection,
-        destination: Address,
-    ) -> None:
-        await Socks5ConnectionResponse(
-            client=client,
-            reply=Socks5ConnectionReply.ADDRESS_TYPE_NOT_SUPPORTED,
-            destination=destination.ip,
-            port=destination.port,
-        ).to_client()
-
     async def success(
         self,
         client: Connection,

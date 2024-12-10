@@ -450,6 +450,12 @@ class Socks5ConnectionRequest(
         return self._address_type
 
     @property
+    def is_socks5h(
+        self,
+    ) -> bool:
+        return self.address_type is Socks5AddressType.DOMAIN
+
+    @property
     def port(
         self,
     ) -> int:

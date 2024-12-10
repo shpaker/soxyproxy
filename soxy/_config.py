@@ -8,7 +8,7 @@ from soxy._errors import ConfigError
 from soxy._ruleset import ProxyingRule, Ruleset
 from soxy._socks import Socks4, Socks5
 from soxy._tcp import TcpTransport
-from soxy._types import Transport
+from soxy._types import ProxySocks, Transport
 
 _DEFAULTS_PROXY_SECTION = {
     'protocol': 'socks5',
@@ -111,7 +111,7 @@ class Config:
     @property
     def socks(
         self,
-    ) -> Socks4 | Socks5:
+    ) -> ProxySocks:
         socks_cls: type[Socks4] | type[Socks5]
         match self._proxy_data.get(
             'protocol',
@@ -124,4 +124,4 @@ class Config:
             case _:
                 msg = 'protocol'
                 raise ConfigError(msg)
-        return socks_cls()
+        return socks_cls()  # type: ignore[return-value]
