@@ -1,14 +1,26 @@
-FROM python:3.7-slim as base-image
-ARG POETRY_VERSION=1.1.7
+FROM python:3.13-slim as base-image
+ARG UV_VERSION=0.1.0
 WORKDIR /service
-RUN pip install "poetry==$POETRY_VERSION"
+
+# Install UV
+RUN pip install "uv==$UV_VERSION"
+
+# Add project files
 ADD pyproject.toml poetry.lock readme.md ./
 ADD _soxyproxy soxyproxy
-RUN poetry build
-RUN python -m venv .venv
-RUN .venv/bin/pip install dist/*.whl
 
-FROM python:3.7-alpine as runtime-image
+# Install dependencies and build the project
+RUN uv install --no-dev
+
+# Create virtual environment and install the built package
+RUN python -m venv .venv && \
+    .venv/bin/pip install dist/*.whl
+
+FROM python:3.13-alpine as runtime-image
 WORKDIR /service
+
+# Copy virtual environment from the build stage
 COPY --from=base-image /service/.venv ./.venv
-ENTRYPOINT ["/service/.venv/bin/python3", "-m", "soxyproxy"]
+
+# Set entrypoint
+ENTRYPOINT ["/service/.venv/bin/python", "-m", "soxyproxy"]

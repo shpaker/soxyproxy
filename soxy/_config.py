@@ -22,14 +22,22 @@ class Config:
         data: dict[str, typing.Any],
     ) -> None:
         self._proxy_data = data.get('proxy', _DEFAULTS_PROXY_SECTION)
+        if not isinstance(self._proxy_data, dict):
+            msg = 'Invalid proxy configuration'
+            raise ConfigError(msg)
+
         if not isinstance(transport_data := data.get('transport'), dict):
-            msg = 'transport'
+            msg = 'Invalid transport configuration'
             raise ConfigError(msg)
         self._transport_data = transport_data
+
         try:
             self._ruleset_data = data['ruleset']
-        except ValueError as exc:
-            msg = 'ruleset'
+            if not isinstance(self._ruleset_data, dict):
+                msg = 'Invalid ruleset configuration'
+                raise ConfigError(msg)
+        except KeyError as exc:
+            msg = 'Missing ruleset configuration'
             raise ConfigError(msg) from exc
 
     @classmethod
@@ -37,13 +45,24 @@ class Config:
         cls,
         fh: typing.BinaryIO,
     ) -> typing.Self:
-        return cls(tomllib.load(fh))
+        try:
+            data = tomllib.load(fh)
+            if not isinstance(data, dict):
+                msg = 'Invalid configuration format'
+                raise ConfigError(msg)
+            return cls(data)
+        except tomllib.TOMLDecodeError as exc:
+            msg = 'Failed to parse configuration'
+            raise ConfigError(msg) from exc
 
     @classmethod
     def from_path(
         cls,
         path: Path,
     ) -> typing.Self:
+        if not path.is_file():
+            msg = f'Configuration file not found: {path}'
+            raise ConfigError(msg)
         with path.open('rb') as fh:
             return cls.load(fh)
 
@@ -58,12 +77,12 @@ class Config:
             case 'tcp':
                 transport_cls = TcpTransport
             case _:
-                msg = 'transport'
+                msg = 'Unsupported transport protocol'
                 raise ConfigError(msg)
         try:
             return transport_cls(**self._transport_data)
         except TypeError as exc:
-            msg = 'transport'
+            msg = 'Invalid transport configuration'
             raise ConfigError(msg) from exc
 
     def _make_rules(
@@ -122,6 +141,6 @@ class Config:
             case 'socks5':
                 socks_cls = Socks5
             case _:
-                msg = 'protocol'
+                msg = 'Unsupported SOCKS protocol'
                 raise ConfigError(msg)
         return socks_cls()  # type: ignore[return-value]
