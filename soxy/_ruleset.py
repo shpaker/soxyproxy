@@ -78,7 +78,7 @@ class Ruleset:
         self,
         client: Connection,
     ) -> bool:
-        result = None
+        result: bool | None = None
         for rule in self._allow_connecting_rules:
             if result := rule(
                 client=client,
@@ -104,7 +104,7 @@ class Ruleset:
         destination: Address,
         domain_name: str | None,
     ) -> bool:
-        result = None
+        result: bool | None = None
         for rule in self._allow_proxying_rules:
             if result := rule(
                 client=client,

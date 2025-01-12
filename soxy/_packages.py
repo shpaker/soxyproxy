@@ -1,7 +1,7 @@
 import struct
 import typing
 from abc import ABC, abstractmethod
-from ipaddress import IPV4LENGTH, IPV6LENGTH, IPv4Address, IPv6Address
+from ipaddress import IPV4LENGTH, IPV6LENGTH, AddressValueError, IPv4Address, IPv6Address
 
 from soxy._errors import PackageError
 from soxy._types import (
@@ -320,20 +320,26 @@ class Socks5AuthorizationRequest(
     ) -> None:
         self._username: str | None = None
         self._password: str | None = None
-        super().__init__(
-            client=client,
-            data=data,
-        )
         try:
             self._username_length = data[1]
             self._password_length = data[2 + self._username_length]
         except IndexError as exc:
-            raise PackageError(self.data) from exc
+            raise PackageError(data) from exc
+        super().__init__(
+            client=client,
+            data=data,
+        )
 
     def _validate(
         self,
     ) -> bool:
-        return self._data[0] == 1
+        return all(
+            [
+                self._data[0] == 1,
+                self._username_length == len(self.username),
+                self._password_length == len(self.password),
+            ]
+        )
 
     @property
     def username(
@@ -344,7 +350,7 @@ class Socks5AuthorizationRequest(
         try:
             self._username = self._data[2 : 2 + self._username_length].decode()
         except (IndexError, UnicodeError) as exc:
-            raise PackageError(self.data) from exc
+            raise PackageError(self._data) from exc
         return self._username
 
     @property
@@ -358,7 +364,7 @@ class Socks5AuthorizationRequest(
                 3 + self._username_length : 3 + self._username_length + self._password_length
             ].decode()
         except (IndexError, UnicodeError) as exc:
-            raise PackageError(self.data) from exc
+            raise PackageError(self._data) from exc
         return self._password
 
 
@@ -498,7 +504,7 @@ class Socks5ConnectionRequest(
                         ip=IPv4Address(self._data[4 : 4 + IPV4LENGTH // 8]),
                         port=port,
                     )
-                except IndexError as exc:
+                except (IndexError, AddressValueError) as exc:
                     raise PackageError(self._data) from exc
             case Socks5AddressType.IPv6:
                 try:
@@ -506,7 +512,7 @@ class Socks5ConnectionRequest(
                         ip=IPv6Address(self._data[4 : 4 + IPV6LENGTH // 8]),
                         port=port,
                     )
-                except IndexError as exc:
+                except (IndexError, AddressValueError) as exc:
                     raise PackageError(self._data) from exc
         return self._destination
 

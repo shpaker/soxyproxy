@@ -38,10 +38,19 @@ if typing.TYPE_CHECKING:
 class _BaseSocks(
     ABC,
 ):
+    """
+    Base class for SOCKS protocol implementations.
+    """
+
     def __init__(
         self,
         resolver: Resolver | None = None,
     ) -> None:
+        """
+        Initialize the base SOCKS class.
+
+        :param resolver: Optional resolver for domain name resolution.
+        """
         self._resolver: typing.Callable[[str], typing.Awaitable[IPv4Address | None]] | None = (
             (resolver_wrapper(resolver)) if resolver else None
         )
@@ -52,7 +61,12 @@ class _BaseSocks(
         client: Connection,
         destination: Address,
     ) -> None:
-        pass
+        """
+        Handle successful connection.
+
+        :param client: Client connection.
+        :param destination: Destination address.
+        """
 
     @abstractmethod
     async def target_unreachable(
@@ -60,23 +74,44 @@ class _BaseSocks(
         client: Connection,
         destination: Address,
     ) -> None:
-        pass
+        """
+        Handle unreachable target.
+
+        :param client: Client connection.
+        :param destination: Destination address.
+        """
 
     @abstractmethod
     async def __call__(
         self,
         client: Connection,
-    ) -> tuple[Address, str | None]: ...
+    ) -> tuple[Address, str | None]:
+        """
+        Handle SOCKS request.
+
+        :param client: Client connection.
+        :return: Tuple of destination address and optional domain name.
+        """
 
 
 class Socks4(
     _BaseSocks,
 ):
+    """
+    SOCKS4 protocol implementation.
+    """
+
     def __init__(
         self,
         auther: Socks4Auther | Socks4AsyncAuther | None = None,
         resolver: Resolver | None = None,
     ) -> None:
+        """
+        Initialize the SOCKS4 class.
+
+        :param auther: Optional authorizer for SOCKS4.
+        :param resolver: Optional resolver for domain name resolution.
+        """
         self._auther: Socks4AsyncAuther | None = (
             auther_wrapper(auther) if auther else None  # type: ignore[assignment]
         )
@@ -89,6 +124,12 @@ class Socks4(
         client: Connection,
         destination: Address,
     ) -> None:
+        """
+        Handle ruleset rejection.
+
+        :param client: Client connection.
+        :param destination: Destination address.
+        """
         await Socks4Response(
             client=client,
             reply=Socks4Reply.REJECTED,
@@ -100,6 +141,12 @@ class Socks4(
         client: Connection,
         destination: Address,
     ) -> None:
+        """
+        Handle successful connection.
+
+        :param client: Client connection.
+        :param destination: Destination address.
+        """
         await Socks4Response(
             client=client,
             reply=Socks4Reply.GRANTED,
@@ -111,6 +158,12 @@ class Socks4(
         client: Connection,
         destination: Address,
     ) -> None:
+        """
+        Handle unreachable target.
+
+        :param client: Client connection.
+        :param destination: Destination address.
+        """
         await Socks4Response(
             client=client,
             reply=Socks4Reply.REJECTED,
@@ -121,6 +174,12 @@ class Socks4(
         self,
         client: Connection,
     ) -> tuple[Address, str | None]:
+        """
+        Handle SOCKS4 request.
+
+        :param client: Client connection.
+        :return: Tuple of destination address and optional domain name.
+        """
         request = await Socks4Request.from_client(client)
         if request.command is Socks4Command.BIND:
             await Socks4Response(
@@ -179,6 +238,13 @@ class Socks4(
         username: str | None,
         destination: Address,
     ) -> None:
+        """
+        Handle authorization.
+
+        :param client: Client connection.
+        :param username: Username for authorization.
+        :param destination: Destination address.
+        """
         if username and not self._auther:
             await Socks4Response(
                 client=client,
@@ -213,11 +279,21 @@ class Socks4(
 class Socks5(
     _BaseSocks,
 ):
+    """
+    SOCKS5 protocol implementation.
+    """
+
     def __init__(
         self,
         auther: Socks5Auther | Socks5AsyncAuther | None = None,
         resolver: Resolver | None = None,
     ) -> None:
+        """
+        Initialize the SOCKS5 class.
+
+        :param auther: Optional authorizer for SOCKS5.
+        :param resolver: Optional resolver for domain name resolution.
+        """
         super().__init__(
             resolver=resolver,
         )
@@ -230,6 +306,12 @@ class Socks5(
         self,
         client: Connection,
     ) -> tuple[Address, str | None]:
+        """
+        Handle SOCKS5 request.
+
+        :param client: Client connection.
+        :return: Tuple of destination address and optional domain name.
+        """
         greetings_request = await Socks5GreetingRequest.from_client(client)
         greetings_response = self._greetings(
             request=greetings_request,
@@ -268,6 +350,12 @@ class Socks5(
         client: Connection,
         destination: Address,
     ) -> None:
+        """
+        Handle successful connection.
+
+        :param client: Client connection.
+        :param destination: Destination address.
+        """
         await Socks5ConnectionResponse(
             client=client,
             reply=Socks5ConnectionReply.SUCCEEDED,
@@ -280,6 +368,12 @@ class Socks5(
         client: Connection,
         destination: Address,
     ) -> None:
+        """
+        Handle unreachable target.
+
+        :param client: Client connection.
+        :param destination: Destination address.
+        """
         await Socks5ConnectionResponse(
             client=client,
             reply=Socks5ConnectionReply.HOST_UNREACHABLE,
@@ -291,6 +385,12 @@ class Socks5(
         self,
         request: Socks5GreetingRequest,
     ) -> Socks5GreetingResponse:
+        """
+        Handle SOCKS5 greetings.
+
+        :param request: SOCKS5 greeting request.
+        :return: SOCKS5 greeting response.
+        """
         if self._allowed_auth_method not in request.methods:
             return Socks5GreetingResponse(
                 client=request.client,
@@ -305,6 +405,12 @@ class Socks5(
         self,
         request: Socks5AuthorizationRequest,
     ) -> Socks5AuthorizationResponse:
+        """
+        Handle SOCKS5 authorization.
+
+        :param request: SOCKS5 authorization request.
+        :return: SOCKS5 authorization response.
+        """
         if self._auther is None:
             raise RuntimeError
         is_success = await self._auther(
@@ -325,6 +431,12 @@ class Socks5(
         self,
         request: Socks5ConnectionRequest,
     ) -> tuple[Address, str | None]:
+        """
+        Handle SOCKS5 connection request.
+
+        :param request: SOCKS5 connection request.
+        :return: Tuple of destination address and optional domain name.
+        """
         if request.domain_name is None:
             if request.destination is None:
                 raise RejectError
