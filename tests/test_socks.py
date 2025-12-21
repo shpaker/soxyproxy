@@ -121,6 +121,7 @@ async def run_proxy_server(
         ),
     ],
 )
+@pytest.mark.socks
 @pytest.mark.asyncio
 async def test_socks4(
     run_proxy_server: None,  # noqa: ARG001
@@ -129,7 +130,7 @@ async def test_socks4(
     exc: type[Exception] | None,
 ) -> None:
     async with httpx.AsyncClient(
-        timeout=15,
+        timeout=5,
         transport=AsyncProxyTransport.from_url(
             proxy_url,
             rdns=is_socks4a,
@@ -203,6 +204,7 @@ async def test_socks4(
         ),
     ],
 )
+@pytest.mark.socks
 @pytest.mark.asyncio
 async def test_socks5(
     run_proxy_server: None,  # noqa: ARG001
@@ -211,7 +213,7 @@ async def test_socks5(
     exc: type[Exception] | None,
 ) -> None:
     async with httpx.AsyncClient(
-        timeout=15,
+        timeout=5,
         transport=AsyncProxyTransport.from_url(
             proxy_url,
             rdns=is_socks5h,

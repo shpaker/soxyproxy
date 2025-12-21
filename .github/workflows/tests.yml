@@ -14,7 +14,7 @@ jobs:
       matrix:
         just-trigger:
           - "lint"
-          - "tests"
+          - "tests-ci"
         python-version:
           - "3.14"
     steps:

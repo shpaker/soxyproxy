@@ -20,3 +20,6 @@ fix:
 
 tests:
     uv run pytest -vvv tests/
+
+tests-ci:
+    uv run pytest -vvv tests/ -m "not socks"
