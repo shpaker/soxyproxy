@@ -6,7 +6,7 @@ on:
     types: [created]
 
 jobs:
-  build:
+  docker-build:
     runs-on: ubuntu-latest
     env:
       REGISTRY_HOST: ghcr.io
@@ -14,16 +14,6 @@ jobs:
       -
         name: Checkout
         uses: actions/checkout@v2
-      -
-        name: Extract branch name
-        shell: bash
-        run: |
-          echo "##[set-output name=name;]$(echo ${GITHUB_REPOSITORY#*/})"
-          echo "##[set-output name=ver;]$(echo ${GITHUB_REF#refs/*/})"
-          echo "##[set-output name=minor_ver;]$(TMP_VAR=${GITHUB_REF#refs/*/}; echo ${TMP_VAR%.*})"
-          echo "##[set-output name=major_ver;]$(TMP_VAR=${GITHUB_REF#refs/*/}; echo ${TMP_VAR%.*.*})"
-          echo "##[set-output name=sha;]$(git rev-parse --short "$GITHUB_SHA")"
-        id: extract_name_and_version
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -37,6 +27,16 @@ jobs:
           registry: ${{ env.REGISTRY_HOST }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      -
+        name: Extract version info
+        shell: bash
+        run: |
+          echo "##[set-output name=name;]$(echo ${GITHUB_REPOSITORY#*/})"
+          echo "##[set-output name=ver;]$(echo ${GITHUB_REF#refs/*/})"
+          echo "##[set-output name=minor_ver;]$(TMP_VAR=${GITHUB_REF#refs/*/}; echo ${TMP_VAR%.*})"
+          echo "##[set-output name=major_ver;]$(TMP_VAR=${GITHUB_REF#refs/*/}; echo ${TMP_VAR%.*.*})"
+          echo "##[set-output name=sha;]$(git rev-parse --short "$GITHUB_SHA")"
+        id: extract_name_and_version
       -
         name: Build and push
         uses: docker/build-push-action@v2
@@ -56,4 +56,23 @@ jobs:
             VERSION=${{ steps.extract_name_and_version.outputs.ver }}
           cache-from: type=registry,ref=${{ env.REGISTRY_HOST }}/${{ github.repository }}:${{ steps.extract_name_and_version.outputs.minor_ver }}
           cache-to: type=inline
+
+  pypi-publish:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract version
+        shell: bash
+        run: |
+          echo "##[set-output name=ver;]$(echo ${GITHUB_REF#refs/*/})"
+        id: extract_name_and_version
+      - run: sed -i 's/0.0.0/'"${{ steps.extract_name_and_version.outputs.ver }}"'/' pyproject.toml
+      - run: head -n 10 pyproject.toml
+      - run: sed -i 's/0.0.0/'"${{ steps.extract_name_and_version.outputs.ver }}"'/' soxy/__init__.py
+      - uses: astral-sh/setup-uv@v7
+      - run: uv python install 3.14
+      - run: uv sync --all-extras --dev
+      - run: uv build
+      - run: uv publish --username __token__ --password ${{ secrets.PYPI_PASS }}
 
