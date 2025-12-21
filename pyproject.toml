@@ -133,6 +133,7 @@ strict_optional = true
 [tool.pytest.ini_options]
 filterwarnings = [
     "ignore:coroutine 'async_main' was never awaited:RuntimeWarning",
+    "ignore:'return' in a 'finally' block:SyntaxWarning",
 ]
 asyncio_default_fixture_loop_scope = "function"
 asyncio_default_test_loop_scope = "function"
