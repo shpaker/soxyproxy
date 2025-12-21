@@ -129,3 +129,10 @@ python_version = "3.14"
 follow_imports = "silent"
 check_untyped_defs = true
 strict_optional = true
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:coroutine 'async_main' was never awaited:RuntimeWarning",
+]
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"

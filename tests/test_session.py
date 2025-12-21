@@ -73,7 +73,7 @@ async def test_session_wait_tasks_with_data(mock_client: Connection, mock_remote
     async with session:
         # Simulate client reading data
         session._tasks[mock_client].cancel()  # noqa: SLF001
-        await asyncio.sleep(0.01)
+        await asyncio.wait_for(asyncio.sleep(0.01), timeout=1.0)
 
         # Manually call _wait_tasks to test it
         # This is tricky because it's called in start(), so we'll test start() instead
@@ -82,13 +82,15 @@ async def test_session_wait_tasks_with_data(mock_client: Connection, mock_remote
 @pytest.mark.asyncio
 async def test_session_wait_tasks_empty_data(mock_client: Connection, mock_remote: Connection) -> None:
     mock_client.read = AsyncMock(return_value=b'')
+    mock_remote.read = AsyncMock(return_value=b'')
     session = Session(client=mock_client, remote=mock_remote)
 
     async with session:
-        # Wait a bit for tasks to complete
-        await asyncio.sleep(0.1)
+        # Manually trigger _wait_tasks to test empty data handling
+        session._finished = False  # noqa: SLF001
+        await asyncio.wait_for(session._wait_tasks(), timeout=5.0)  # noqa: SLF001
         # Session should finish when empty data is received
-        # This is tested through the actual flow
+        assert session._finished is True  # noqa: SLF001
 
 
 @pytest.mark.asyncio
@@ -118,13 +120,14 @@ async def test_session_start_basic_flow(mock_client: Connection, mock_remote: Co
         # Start session in background
         task = asyncio.create_task(session.start())
 
-        # Wait a bit for some data exchange
-        await asyncio.sleep(0.1)
-
-        # Cancel the task to stop the session
-        task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
+        # Wait for session to process data and finish (empty data should stop it)
+        try:
+            await asyncio.wait_for(task, timeout=5.0)
+        except asyncio.TimeoutError:
+            # If timeout, cancel and wait for cancellation
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await asyncio.wait_for(task, timeout=1.0)
 
 
 @pytest.mark.asyncio
@@ -137,7 +140,7 @@ async def test_session_data_forwarding(mock_client: Connection, mock_remote: Con
     async with session:
         # Manually trigger data forwarding
         session._finished = False  # noqa: SLF001
-        await session._wait_tasks()  # noqa: SLF001
+        await asyncio.wait_for(session._wait_tasks(), timeout=5.0)  # noqa: SLF001
 
         # Check that remote.write was called with client data
         mock_remote.write.assert_called_once_with(b'forward this')
@@ -146,7 +149,7 @@ async def test_session_data_forwarding(mock_client: Connection, mock_remote: Con
 @pytest.mark.asyncio
 async def test_session_timeout_error_handling(mock_client: Connection, mock_remote: Connection) -> None:
     async def slow_read() -> bytes:
-        await asyncio.sleep(10)  # Simulate timeout
+        await asyncio.sleep(0.1)  # Simulate slow read (reduced from 10s to avoid hanging)
         return b'data'
 
     mock_client.read = AsyncMock(side_effect=slow_read)
@@ -160,4 +163,4 @@ async def test_session_timeout_error_handling(mock_client: Connection, mock_remo
         await asyncio.sleep(0.01)
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
-            await task
+            await asyncio.wait_for(task, timeout=5.0)
