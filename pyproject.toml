@@ -3,23 +3,25 @@ name = "soxyproxy"
 version = "0.0.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = []
 license = "GPL-3.0"
 authors = [
   { name = "Aleksandr Shpak", email = "shpaker@gmail.com" },
 ]
 classifiers = [
-  "Topic :: Software Development :: Libraries :: Python Modules",
-  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-  "Topic :: Internet :: Proxy Servers",
   "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Internet :: Proxy Servers",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
 ]
-keywords = ["proxy", "socks", "socks4", "socks4a", "socks4", "socks5h"]
+keywords = ["proxy", "socks", "socks4", "socks4a", "socks5", "socks5h"]
 
 [project.urls]
 Homepage = "https://github.com/shpaker/soxyproxy/"
@@ -33,27 +35,32 @@ include = ["soxy"]
 
 [dependency-groups]
 dev = [
-  "pytest-asyncio>=0.24.0",
-  "pytest>=8.3.3",
-  "ruff>=0.8.0",
-  "pre-commit>=4.0.1",
-  "mypy>=1.13.0",
-  "httpx>=0.28.0",
-  "httpx-socks>=0.10",
+  "pytest-asyncio>=1.3",
+  "pytest>=9.0",
+  "ruff>=0.14",
+  "pre-commit>=4.5",
+  "mypy>=1.19",
+    "httpx>=0.28.0",
+    "httpx-socks>=0.10",
+    "httpcore>=1.0.8",
 ]
 
 [project.scripts]
 soxy = "soxy.__main__:main"
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py314"
 line-length = 120
 exclude = [
   ".venv",
 ]
 lint.flake8-tidy-imports.ban-relative-imports = "all"
 lint.ignore = [
-  "S101", # Too many arguments to function call
+    "S101", # Too many arguments to function call
+    "TC001", # Move application import into type-checking block - too aggressive, breaks runtime
+    "TC003", # Move standard library import into type-checking block - too aggressive, breaks runtime
+    "UP040", # Type alias uses TypeAlias annotation - we need it for Python 3.14 compatibility
+    "UP043", # Unnecessary default type arguments in Generator
 ]
 lint.select = [
   "F", # Pyflakes
@@ -118,7 +125,15 @@ quote-style = "single"
 docstring-code-format = true
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 follow_imports = "silent"
 check_untyped_defs = true
 strict_optional = true
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:coroutine 'async_main' was never awaited:RuntimeWarning",
+    "ignore:'return' in a 'finally' block:SyntaxWarning",
+]
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"

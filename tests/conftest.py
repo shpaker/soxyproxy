@@ -7,6 +7,7 @@ def pytest_configure(
     config: pytest.Config,
 ) -> None:
     config.addinivalue_line('markers', 'socks_obj(obj): ')
+    config.addinivalue_line('markers', 'socks: marks tests as socks integration tests (deselect with -m "not socks")')
 
 
 @pytest.fixture

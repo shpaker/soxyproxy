@@ -1,7 +1,7 @@
+import argparse
 import asyncio
 import logging
 import sys
-from contextlib import suppress
 from pathlib import Path
 from tomllib import TOMLDecodeError
 
@@ -31,23 +31,32 @@ async def async_main(config: Config, logfile: str | None) -> None:
         await app.serve_forever()
 
 
-def main() -> None:
-    try:
-        config_filename = sys.argv[1]
-    except IndexError:
-        logger.error('🥹: please, give me my config')
-        sys.exit(1)
-
-    config_path = Path(config_filename)
+def _run_proxy(config_path: Path, logfile: str | None) -> None:
     validate_config_path(config_path)
-
     config = load_config(config_path)
-
-    logfile: str | None = None
-    with suppress(IndexError):
-        logfile = sys.argv[2]
-
     asyncio.run(async_main(config, logfile))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description='Start soxyproxy server with the given configuration file.',
+    )
+    parser.add_argument(
+        'config',
+        type=Path,
+        help='Path to configuration file',
+    )
+    parser.add_argument(
+        '--logfile',
+        '-l',
+        type=Path,
+        default=None,
+        help='Path to log file. If not specified, logs will be printed to terminal.',
+    )
+
+    args = parser.parse_args()
+    logfile_str = str(args.logfile) if args.logfile else None
+    _run_proxy(args.config, logfile_str)
 
 
 if __name__ == '__main__':

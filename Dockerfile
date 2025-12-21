@@ -1,4 +1,4 @@
-FROM python:3.13-slim as base-image
+FROM python:3.14-slim as base-image
 ARG UV_VERSION=0.1.0
 WORKDIR /service
 
@@ -16,7 +16,7 @@ RUN uv install --no-dev
 RUN python -m venv .venv && \
     .venv/bin/pip install dist/*.whl
 
-FROM python:3.13-alpine as runtime-image
+FROM python:3.14-alpine as runtime-image
 WORKDIR /service
 
 # Copy virtual environment from the build stage

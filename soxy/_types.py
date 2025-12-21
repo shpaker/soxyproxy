@@ -4,16 +4,16 @@ import types
 import typing
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
-type Resolver = typing.Callable[[str], IPv4Address | typing.Awaitable[IPv4Address]]
+Resolver: typing.TypeAlias = typing.Callable[[str], IPv4Address | typing.Awaitable[IPv4Address]]
 
-type Socks4Auther = typing.Callable[[str], bool]
-type Socks4AsyncAuther = typing.Callable[[str], typing.Awaitable[bool]]
+Socks4Auther: typing.TypeAlias = typing.Callable[[str], bool]
+Socks4AsyncAuther: typing.TypeAlias = typing.Callable[[str], typing.Awaitable[bool]]
 
-type Socks5Auther = typing.Callable[[str, str], bool]
-type Socks5AsyncAuther = typing.Callable[[str, str], typing.Awaitable[bool]]
+Socks5Auther: typing.TypeAlias = typing.Callable[[str, str], bool]
+Socks5AsyncAuther: typing.TypeAlias = typing.Callable[[str, str], typing.Awaitable[bool]]
 
-type IPvAnyAddress = IPv4Address | IPv6Address
-type IPvAnyNetwork = IPv4Network | IPv6Network
+IPvAnyAddress: typing.TypeAlias = IPv4Address | IPv6Address
+IPvAnyNetwork: typing.TypeAlias = IPv4Network | IPv6Network
 
 
 class SocksVersions(

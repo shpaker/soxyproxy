@@ -1,8 +1,8 @@
-import asyncio
+import inspect
 import typing
 from ipaddress import IPv4Address
-from traceback import print_exc
 
+from soxy._logger import logger
 from soxy._types import (
     Resolver,
     Socks4AsyncAuther,
@@ -10,9 +10,6 @@ from soxy._types import (
     Socks5AsyncAuther,
     Socks5Auther,
 )
-
-_A = typing.TypeVar('_A')
-_R = typing.TypeVar('_R')
 
 
 def auther_wrapper(
@@ -25,11 +22,11 @@ def auther_wrapper(
         try:
             result: bool = (
                 await _func(*args, **kwargs)  # type: ignore[assignment]
-                if asyncio.iscoroutinefunction(_func)
+                if inspect.iscoroutinefunction(_func)
                 else _func(*args, **kwargs)
             )
-        except Exception:  # noqa: BLE001
-            print_exc()
+        except Exception as exc:  # noqa: BLE001
+            logger.exception('Error in auther_wrapper', exc_info=exc)
             result = False
         return result
 
@@ -44,10 +41,10 @@ def resolver_wrapper(
     ) -> IPv4Address | None:
         try:
             result: IPv4Address | None = (
-                await _func(name) if asyncio.iscoroutinefunction(_func) else _func(name)  # type: ignore[assignment]
+                await _func(name) if inspect.iscoroutinefunction(_func) else _func(name)  # type: ignore[assignment]
             )
-        except Exception:  # noqa: BLE001
-            print_exc()
+        except Exception as exc:  # noqa: BLE001
+            logger.exception('Error in resolver_wrapper', exc_info=exc)
             return None
         return result
 

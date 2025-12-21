@@ -14,15 +14,13 @@ jobs:
       matrix:
         just-trigger:
           - "lint"
-          - "tests"
+          - "tests-ci"
         python-version:
-          - "3.11"
-          - "3.12"
-          - "3.13"
+          - "3.14"
     steps:
-      - uses: actions/checkout@v4
-      - uses: extractions/setup-just@v2
-      - uses: astral-sh/setup-uv@v4
+      - uses: actions/checkout@v6
+      - uses: extractions/setup-just@v3
+      - uses: astral-sh/setup-uv@v7
       - run: uv python install ${{ matrix.python-version }}
       - run: uv sync --all-extras --dev
       - run: just ${{ matrix.just-trigger }}

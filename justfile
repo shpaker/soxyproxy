@@ -19,4 +19,7 @@ fix:
 #    uv run ruff check --fix --unsafe-fixes {{ TESTS_PATH }}
 
 tests:
-    uv run pytest tests/
+    uv run pytest -vvv tests/
+
+tests-ci:
+    uv run pytest -vvv tests/ -m "not socks"
