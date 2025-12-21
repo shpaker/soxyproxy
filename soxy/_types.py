@@ -12,8 +12,8 @@ Socks4AsyncAuther: typing.TypeAlias = typing.Callable[[str], typing.Awaitable[bo
 Socks5Auther: typing.TypeAlias = typing.Callable[[str, str], bool]
 Socks5AsyncAuther: typing.TypeAlias = typing.Callable[[str, str], typing.Awaitable[bool]]
 
-IPvAnyAddress: typing.TypeAlias = IPv4Address | IPv6Address
-IPvAnyNetwork: typing.TypeAlias = IPv4Network | IPv6Network
+IPvAnyAddress: typing.TypeAlias = typing.Union(IPv4Address, IPv6Address)
+IPvAnyNetwork: typing.TypeAlias = typing.Union(IPv4Network, IPv6Network)
 
 
 class SocksVersions(
