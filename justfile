@@ -19,4 +19,4 @@ fix:
 #    uv run ruff check --fix --unsafe-fixes {{ TESTS_PATH }}
 
 tests:
-    uv run pytest -v tests/
+    uv run pytest -vvv tests/
