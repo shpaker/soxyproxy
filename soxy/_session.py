@@ -1,6 +1,7 @@
 import asyncio
 import types
 import typing
+from contextlib import suppress
 
 from soxy._logger import logger
 from soxy._types import Connection
@@ -35,10 +36,8 @@ class Session:
                 task.cancel()
         for task in self._tasks.values():
             if not task.done():
-                try:
+                with suppress(asyncio.CancelledError, Exception):
                     await task
-                except (asyncio.CancelledError, Exception):
-                    pass
 
     def _create_tasks(
         self,
@@ -65,7 +64,7 @@ class Session:
             another: Connection = (self.connections - {conn}).pop()
             try:
                 data = task.result()
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.exception(f'{conn} read error: {exc}')
                 self._finished = True
                 return
@@ -75,7 +74,7 @@ class Session:
             self._tasks[conn] = asyncio.create_task(conn.read())
             try:
                 await another.write(data)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.exception(f'{another} write error: {exc}')
                 self._finished = True
                 return
@@ -90,6 +89,6 @@ class Session:
         try:
             while self._finished is False:
                 await self._wait_tasks()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.exception(f'Session error: {exc}')
             self._finished = True

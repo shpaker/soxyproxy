@@ -1,7 +1,5 @@
 from ipaddress import IPv4Address
 
-import pytest
-
 from soxy._errors import (
     AuthorizationError,
     ConfigError,
@@ -68,4 +66,3 @@ def test_config_error_default_message() -> None:
     error = ConfigError(section)
     assert str(error) == f'[{section}] incorrect configuration'
     assert isinstance(error, ValueError)
-

@@ -1,4 +1,3 @@
-import typing
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
 from soxy._errors import PackageError
@@ -9,9 +8,9 @@ def match_addresses(
     address: Address,
     match_with: IPvAnyAddress | IPvAnyNetwork,
 ) -> bool:
-    if isinstance(match_with, (IPv4Address, IPv6Address)):
+    if isinstance(match_with, IPv4Address | IPv6Address):
         return address.ip == match_with
-    if isinstance(match_with, (IPv4Network, IPv6Network)):
+    if isinstance(match_with, IPv4Network | IPv6Network):
         return address.ip in match_with
     return False
 

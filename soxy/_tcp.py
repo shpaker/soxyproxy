@@ -3,6 +3,7 @@ import types
 import typing
 from ipaddress import IPv4Address, IPv6Address
 
+from soxy._logger import logger
 from soxy._session import Session
 from soxy._types import Address, Connection, Transport
 
@@ -142,8 +143,8 @@ class TcpTransport(
             try:
                 if not (destination := await self._on_client_connected_cb(client)):
                     return
-            except Exception as exc:
-                logger.exception(f'Error in on_client_connected_cb: {exc}')
+            except Exception:  # noqa: BLE001
+                logger.exception('Error in on_client_connected_cb')
                 return
             try:
                 async with await TCPConnection.open(
@@ -152,8 +153,8 @@ class TcpTransport(
                 ) as remote:
                     try:
                         await self._start_messaging_cb(client, remote)
-                    except Exception as exc:
-                        logger.exception(f'Error in start_messaging_cb: {exc}')
+                    except Exception:  # noqa: BLE001
+                        logger.exception('Error in start_messaging_cb')
                         return
                     try:
                         async with Session(
@@ -161,14 +162,14 @@ class TcpTransport(
                             remote=remote,
                         ) as session:
                             await session.start()
-                    except Exception as exc:
-                        logger.exception(f'Session error: {exc}')
+                    except Exception:  # noqa: BLE001
+                        logger.exception('Session error')
             except OSError:
                 try:
                     await self._on_remote_unreachable_cb(client, destination)
-                except Exception as exc:
-                    logger.exception(f'Error in on_remote_unreachable_cb: {exc}')
+                except Exception:  # noqa: BLE001
+                    logger.exception('Error in on_remote_unreachable_cb')
                 return
-            except Exception as exc:
-                logger.exception(f'Connection error: {exc}')
+            except Exception:  # noqa: BLE001
+                logger.exception('Connection error')
                 return

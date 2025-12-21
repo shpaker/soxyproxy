@@ -31,22 +31,26 @@ class Config:
     ) -> None:
         self._proxy_data = data.get('proxy', _DEFAULTS_PROXY_SECTION)
         if not isinstance(self._proxy_data, dict):
+            section = 'proxy'
             msg = 'Invalid proxy configuration'
-            raise ConfigError('proxy', msg)
+            raise ConfigError(section, msg)
 
         if not isinstance(transport_data := data.get('transport'), dict):
+            section = 'transport'
             msg = 'Invalid transport configuration'
-            raise ConfigError('transport', msg)
+            raise ConfigError(section, msg)
         self._transport_data = transport_data
 
         try:
             self._ruleset_data = data['ruleset']
             if not isinstance(self._ruleset_data, dict):
+                section = 'ruleset'
                 msg = 'Invalid ruleset configuration'
-                raise ConfigError('ruleset', msg)
+                raise ConfigError(section, msg)
         except KeyError as exc:
+            section = 'ruleset'
             msg = 'Missing ruleset configuration'
-            raise ConfigError('ruleset', msg) from exc
+            raise ConfigError(section, msg) from exc
 
     @classmethod
     def load(
@@ -56,12 +60,14 @@ class Config:
         try:
             data = tomllib.load(fh)
             if not isinstance(data, dict):
+                section = 'config'
                 msg = 'Invalid configuration format'
-                raise ConfigError('config', msg)
+                raise ConfigError(section, msg)
             return cls(data)
         except tomllib.TOMLDecodeError as exc:
+            section = 'config'
             msg = 'Failed to parse configuration'
-            raise ConfigError('config', msg) from exc
+            raise ConfigError(section, msg) from exc
 
     @classmethod
     def from_path(
@@ -69,8 +75,9 @@ class Config:
         path: Path,
     ) -> typing.Self:
         if not path.is_file():
+            section = 'config'
             msg = f'Configuration file not found: {path}'
-            raise ConfigError('config', msg)
+            raise ConfigError(section, msg)
         with path.open('rb') as fh:
             return cls.load(fh)
 
@@ -85,13 +92,15 @@ class Config:
             case 'tcp':
                 transport_cls = TcpTransport
             case _:
+                section = 'transport'
                 msg = 'Unsupported transport protocol'
-                raise ConfigError('transport', msg)
+                raise ConfigError(section, msg)
         try:
             return transport_cls(**self._transport_data)
         except TypeError as exc:
+            section = 'transport'
             msg = 'Invalid transport configuration'
-            raise ConfigError('transport', msg) from exc
+            raise ConfigError(section, msg) from exc
 
     def _make_connecting_rules(
         self,
@@ -124,7 +133,7 @@ class Config:
                 from_addresses=from_,
             )
 
-    def _make_rules(
+    def _make_rules(  # noqa: C901, PLR0912
         self,
         rules: list[dict[str, typing.Any]],
     ) -> typing.Generator[ProxyingRule, None, None]:
@@ -156,23 +165,18 @@ class Config:
                 continue
             if isinstance(to_, str):
                 to_parsed = None
-                try:
+                with suppress(ValueError, TypeError):
                     to_parsed = IPv4Address(to_)
-                except (ValueError, TypeError):
-                    try:
-                        to_parsed = IPv4Network(to_)
-                    except (ValueError, TypeError):
-                        try:
-                            to_parsed = IPv6Address(to_)
-                        except (ValueError, TypeError):
-                            try:
-                                to_parsed = IPv6Network(to_)
-                            except (ValueError, TypeError):
-                                pass
                 if to_parsed is None:
-                    to_ = to_
-                else:
-                    to_ = to_parsed
+                    with suppress(ValueError, TypeError):
+                        to_parsed = IPv4Network(to_)
+                if to_parsed is None:
+                    with suppress(ValueError, TypeError):
+                        to_parsed = IPv6Address(to_)
+                if to_parsed is None:
+                    with suppress(ValueError, TypeError):
+                        to_parsed = IPv6Network(to_)
+                to_ = to_ if to_parsed is None else to_parsed
             if not isinstance(
                 to_,
                 IPv4Address | IPv6Address | IPv4Network | IPv6Network | str,
@@ -211,9 +215,11 @@ class Config:
         Create a resolver function using OS socket.gethostbyname.
         The blocking call is executed in a thread pool to avoid blocking the event loop.
         """
+
         async def resolver(domain_name: str) -> IPv4Address:
             ip_str = await asyncio.to_thread(gethostbyname, domain_name)
             return IPv4Address(ip_str)
+
         return resolver
 
     def _create_auther(
@@ -229,19 +235,24 @@ class Config:
             return None
 
         if not isinstance(auth_data, dict):
+            section = 'proxy'
             msg = 'Invalid auth configuration'
-            raise ConfigError('proxy', msg)
+            raise ConfigError(section, msg)
 
         # For SOCKS5: username -> password mapping
         if protocol in ('socks5', 'socks5h'):
+
             def socks5_auther(username: str, password: str) -> bool:
                 return auth_data.get(username) == password
+
             return socks5_auther
 
         # For SOCKS4: only username check (password not used)
         if protocol in ('socks4', 'socks4a'):
+
             def socks4_auther(username: str) -> bool:
                 return username in auth_data
+
             return socks4_auther
 
         return None
@@ -268,7 +279,8 @@ class Config:
         elif protocol in ('socks5', 'socks5h'):
             socks_cls = Socks5
         else:
+            section = 'proxy'
             msg = 'Unsupported SOCKS protocol'
-            raise ConfigError('proxy', msg)
+            raise ConfigError(section, msg)
 
         return socks_cls(auther=auther, resolver=resolver)  # type: ignore[return-value]

@@ -1,7 +1,8 @@
 import asyncio
+import contextlib
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -88,10 +89,8 @@ async def test_async_main(temp_config_file: Path) -> None:
         await asyncio.sleep(0.01)
         task.cancel()
 
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await task
-        except asyncio.CancelledError:
-            pass
 
 
 @pytest.mark.asyncio
@@ -112,10 +111,8 @@ async def test_async_main_with_logfile(temp_config_file: Path, tmp_path: Path) -
         await asyncio.sleep(0.01)
         task.cancel()
 
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await task
-        except asyncio.CancelledError:
-            pass
 
 
 def test_run_proxy(temp_config_file: Path) -> None:
@@ -132,28 +129,46 @@ def test_run_proxy_with_logfile(temp_config_file: Path) -> None:
 
 def test_main_with_valid_args(temp_config_file: Path) -> None:
     """Test that main function works with valid arguments"""
-    with patch('soxy.__main__._run_proxy') as mock_run_proxy:
-        with patch.object(sys, 'argv', ['soxy', str(temp_config_file)]):
-            main()
-            mock_run_proxy.assert_called_once_with(temp_config_file, None)
+    with (
+        patch('soxy.__main__._run_proxy') as mock_run_proxy,
+        patch.object(
+            sys,
+            'argv',
+            ['soxy', str(temp_config_file)],
+        ),
+    ):
+        main()
+        mock_run_proxy.assert_called_once_with(temp_config_file, None)
 
 
 def test_main_with_logfile(temp_config_file: Path, tmp_path: Path) -> None:
     """Test that main function works with logfile argument"""
     logfile = tmp_path / 'test.log'
-    with patch('soxy.__main__._run_proxy') as mock_run_proxy:
-        with patch.object(sys, 'argv', ['soxy', str(temp_config_file), '--logfile', str(logfile)]):
-            main()
-            mock_run_proxy.assert_called_once_with(temp_config_file, str(logfile))
+    with (
+        patch('soxy.__main__._run_proxy') as mock_run_proxy,
+        patch.object(
+            sys,
+            'argv',
+            ['soxy', str(temp_config_file), '--logfile', str(logfile)],
+        ),
+    ):
+        main()
+        mock_run_proxy.assert_called_once_with(temp_config_file, str(logfile))
 
 
 def test_main_with_short_logfile_option(temp_config_file: Path, tmp_path: Path) -> None:
     """Test that main function works with short logfile option"""
     logfile = tmp_path / 'test.log'
-    with patch('soxy.__main__._run_proxy') as mock_run_proxy:
-        with patch.object(sys, 'argv', ['soxy', str(temp_config_file), '-l', str(logfile)]):
-            main()
-            mock_run_proxy.assert_called_once_with(temp_config_file, str(logfile))
+    with (
+        patch('soxy.__main__._run_proxy') as mock_run_proxy,
+        patch.object(
+            sys,
+            'argv',
+            ['soxy', str(temp_config_file), '-l', str(logfile)],
+        ),
+    ):
+        main()
+        mock_run_proxy.assert_called_once_with(temp_config_file, str(logfile))
 
 
 def test_main_missing_config() -> None:
@@ -162,7 +177,8 @@ def test_main_missing_config() -> None:
         with pytest.raises(SystemExit) as exc_info:
             main()
         # argparse will exit with code 2 for missing required argument
-        assert exc_info.value.code == 2
+        argparse_error_code = 2
+        assert exc_info.value.code == argparse_error_code
 
 
 def test_main_help(capsys: pytest.CaptureFixture[str]) -> None:
@@ -175,4 +191,3 @@ def test_main_help(capsys: pytest.CaptureFixture[str]) -> None:
         captured = capsys.readouterr()
         assert 'Start soxyproxy server' in captured.out
         assert '--logfile' in captured.out
-

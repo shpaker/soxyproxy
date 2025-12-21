@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -24,20 +25,21 @@ def mock_remote() -> Connection:
 @pytest.mark.asyncio
 async def test_session_init(mock_client: Connection, mock_remote: Connection) -> None:
     session = Session(client=mock_client, remote=mock_remote)
-    assert session._client == mock_client
-    assert session._remote == mock_remote
-    assert session._finished is True
-    assert session._tasks == {}
+    assert session._client == mock_client  # noqa: SLF001
+    assert session._remote == mock_remote  # noqa: SLF001
+    assert session._finished is True  # noqa: SLF001
+    assert session._tasks == {}  # noqa: SLF001
 
 
 @pytest.mark.asyncio
 async def test_session_aenter(mock_client: Connection, mock_remote: Connection) -> None:
     session = Session(client=mock_client, remote=mock_remote)
     async with session:
-        assert session._finished is False
-        assert len(session._tasks) == 2
-        assert mock_client in session._tasks
-        assert mock_remote in session._tasks
+        assert session._finished is False  # noqa: SLF001
+        expected_tasks_count = 2
+        assert len(session._tasks) == expected_tasks_count  # noqa: SLF001
+        assert mock_client in session._tasks  # noqa: SLF001
+        assert mock_remote in session._tasks  # noqa: SLF001
 
 
 @pytest.mark.asyncio
@@ -45,7 +47,8 @@ async def test_session_connections(mock_client: Connection, mock_remote: Connect
     session = Session(client=mock_client, remote=mock_remote)
     async with session:
         connections = session.connections
-        assert len(connections) == 2
+        expected_connections_count = 2
+        assert len(connections) == expected_connections_count
         assert mock_client in connections
         assert mock_remote in connections
 
@@ -54,7 +57,7 @@ async def test_session_connections(mock_client: Connection, mock_remote: Connect
 async def test_session_aexit_cancels_tasks(mock_client: Connection, mock_remote: Connection) -> None:
     session = Session(client=mock_client, remote=mock_remote)
     async with session:
-        tasks = list(session._tasks.values())
+        tasks = list(session._tasks.values())  # noqa: SLF001
         assert all(not task.done() for task in tasks)
 
     # After exit, tasks should be cancelled
@@ -69,12 +72,11 @@ async def test_session_wait_tasks_with_data(mock_client: Connection, mock_remote
 
     async with session:
         # Simulate client reading data
-        session._tasks[mock_client].cancel()
+        session._tasks[mock_client].cancel()  # noqa: SLF001
         await asyncio.sleep(0.01)
 
         # Manually call _wait_tasks to test it
         # This is tricky because it's called in start(), so we'll test start() instead
-        pass
 
 
 @pytest.mark.asyncio
@@ -121,10 +123,8 @@ async def test_session_start_basic_flow(mock_client: Connection, mock_remote: Co
 
         # Cancel the task to stop the session
         task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await task
-        except asyncio.CancelledError:
-            pass
 
 
 @pytest.mark.asyncio
@@ -136,8 +136,8 @@ async def test_session_data_forwarding(mock_client: Connection, mock_remote: Con
 
     async with session:
         # Manually trigger data forwarding
-        session._finished = False
-        await session._wait_tasks()
+        session._finished = False  # noqa: SLF001
+        await session._wait_tasks()  # noqa: SLF001
 
         # Check that remote.write was called with client data
         mock_remote.write.assert_called_once_with(b'forward this')
@@ -159,8 +159,5 @@ async def test_session_timeout_error_handling(mock_client: Connection, mock_remo
         task = asyncio.create_task(session.start())
         await asyncio.sleep(0.01)
         task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await task
-        except asyncio.CancelledError:
-            pass
-
