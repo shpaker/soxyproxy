@@ -20,7 +20,7 @@ This project is actively developed on a periodic basis and is maintained as a ho
 
 ## Requirements
 
-- Python >= 3.12
+- Python >= 3.14
 
 ## 🛩️ Installation
 
@@ -385,4 +385,3 @@ mypy soxy
 ## License
 
 This project is licensed under the [GPL-3.0](LICENSE) license.
-
