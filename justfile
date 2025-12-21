@@ -1,5 +1,7 @@
 SOURCE_PATH := "soxy"
 TESTS_PATH := "tests"
+IMAGE_NAME := "soxyproxy"
+IMAGE_TAG := "latest"
 
 upgrade:
     uv lock --upgrade
@@ -23,3 +25,11 @@ tests:
 
 tests-ci:
     uv run pytest -vvv tests/ -m "not socks"
+
+build tag="latest" version="":
+    #!/usr/bin/env bash
+    if [ -n "{{ version }}" ]; then
+        docker build --build-arg VERSION={{ version }} -t {{ IMAGE_NAME }}:{{ tag }} .
+    else
+        docker build -t {{ IMAGE_NAME }}:{{ tag }} .
+    fi
