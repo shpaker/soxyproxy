@@ -1,7 +1,6 @@
 import asyncio
 import types
 import typing
-from traceback import print_exc
 
 from soxy._logger import logger
 from soxy._types import Connection
@@ -34,6 +33,12 @@ class Session:
         for task in self._tasks.values():
             if not task.cancelled():
                 task.cancel()
+        for task in self._tasks.values():
+            if not task.done():
+                try:
+                    await task
+                except (asyncio.CancelledError, Exception):
+                    pass
 
     def _create_tasks(
         self,
@@ -50,25 +55,30 @@ class Session:
         return set(self._tasks.keys())
 
     async def _wait_tasks(self) -> None:
-        try:
-            done, _ = await asyncio.wait(
-                self._tasks.values(),
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-        except TimeoutError:
-            print_exc()
-            self._finished = True
-            return
+        done, _ = await asyncio.wait(
+            self._tasks.values(),
+            return_when=asyncio.FIRST_COMPLETED,
+        )
         for conn, task in self._tasks.items():
             if task not in done:
                 continue
             another: Connection = (self.connections - {conn}).pop()
-            data = task.result()
+            try:
+                data = task.result()
+            except Exception as exc:
+                logger.exception(f'{conn} read error: {exc}')
+                self._finished = True
+                return
             if not data:
                 self._finished = True
                 return
             self._tasks[conn] = asyncio.create_task(conn.read())
-            await another.write(data)
+            try:
+                await another.write(data)
+            except Exception as exc:
+                logger.exception(f'{another} write error: {exc}')
+                self._finished = True
+                return
             if conn is self._client:
                 logger.info(f'{self._client} -> {len(data)} bytes -> {self._remote}')
             else:
@@ -77,5 +87,9 @@ class Session:
     async def start(
         self,
     ) -> None:
-        while self._finished is False:
-            await self._wait_tasks()
+        try:
+            while self._finished is False:
+                await self._wait_tasks()
+        except Exception as exc:
+            logger.exception(f'Session error: {exc}')
+            self._finished = True

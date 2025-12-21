@@ -21,7 +21,7 @@ class ConnectingRule:
     ) -> bool:
         return match_addresses(
             address=client.address,
-            math_with=self._from_addresses,
+            match_with=self._from_addresses,
         )
 
     def __repr__(
@@ -49,10 +49,10 @@ class ProxyingRule:
             return not (not isinstance(domain_name, str) or domain_name != self._to_addresses)
         return match_addresses(
             address=client.address,
-            math_with=self._from_addresses,
+            match_with=self._from_addresses,
         ) and match_addresses(
             address=destination,
-            math_with=self._to_addresses,
+            match_with=self._to_addresses,
         )
 
     def __repr__(

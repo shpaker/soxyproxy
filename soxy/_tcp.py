@@ -1,7 +1,7 @@
 import asyncio
 import types
 import typing
-from ipaddress import IPv4Address
+from ipaddress import IPv4Address, IPv6Address
 
 from soxy._session import Session
 from soxy._types import Address, Connection, Transport
@@ -17,9 +17,17 @@ class TCPConnection(
     ) -> None:
         self._reader = reader
         self._writer = writer
-        address, port = self._writer.get_extra_info('peername')
+        peername = self._writer.get_extra_info('peername')
+        if peername is None:
+            msg = 'peername is not available'
+            raise RuntimeError(msg)
+        address, port = peername
+        try:
+            ip = IPv4Address(address)
+        except ValueError:
+            ip = IPv6Address(address)
         self._address = Address(
-            ip=IPv4Address(address),
+            ip=ip,
             port=port,
         )
 
@@ -71,6 +79,7 @@ class TcpTransport(
         port: int = 1080,
     ) -> None:
         self._address = (host, port)
+        self._server: asyncio.Server | None = None
         self._on_client_connected_cb: typing.Callable[[Connection], typing.Awaitable[Address | None]] | None = None
         self._start_messaging_cb: typing.Callable[[Connection, Connection], typing.Awaitable[None]] | None = None
         self._on_remote_unreachable_cb: typing.Callable[[Connection, Address], typing.Awaitable[None]] | None = None
@@ -97,11 +106,12 @@ class TcpTransport(
     async def __aenter__(
         self,
     ) -> asyncio.Server:
-        return await asyncio.start_server(
+        self._server = await asyncio.start_server(
             client_connected_cb=self._client_cb,
             host=self._address[0],
             port=self._address[1],
         )
+        return self._server
 
     async def __aexit__(
         self,
@@ -109,7 +119,9 @@ class TcpTransport(
         exc_value: BaseException | None,
         exc_traceback: types.TracebackType | None,
     ) -> None:
-        pass
+        if self._server is not None:
+            self._server.close()
+            await self._server.wait_closed()
 
     async def _client_cb(
         self,
@@ -127,19 +139,36 @@ class TcpTransport(
             reader=reader,
             writer=writer,
         ) as client:
-            if not (destination := await self._on_client_connected_cb(client)):
+            try:
+                if not (destination := await self._on_client_connected_cb(client)):
+                    return
+            except Exception as exc:
+                logger.exception(f'Error in on_client_connected_cb: {exc}')
                 return
             try:
                 async with await TCPConnection.open(
                     host=str(destination.ip),
                     port=destination.port,
                 ) as remote:
-                    await self._start_messaging_cb(client, remote)
-                    async with Session(
-                        client=client,
-                        remote=remote,
-                    ) as session:
-                        await session.start()
+                    try:
+                        await self._start_messaging_cb(client, remote)
+                    except Exception as exc:
+                        logger.exception(f'Error in start_messaging_cb: {exc}')
+                        return
+                    try:
+                        async with Session(
+                            client=client,
+                            remote=remote,
+                        ) as session:
+                            await session.start()
+                    except Exception as exc:
+                        logger.exception(f'Session error: {exc}')
             except OSError:
-                await self._on_remote_unreachable_cb(client, destination)
+                try:
+                    await self._on_remote_unreachable_cb(client, destination)
+                except Exception as exc:
+                    logger.exception(f'Error in on_remote_unreachable_cb: {exc}')
+                return
+            except Exception as exc:
+                logger.exception(f'Connection error: {exc}')
                 return

@@ -414,9 +414,9 @@ class Socks5ConnectionRequest(
     def _validate(
         self,
     ) -> bool:
-        return any(
+        return not any(
             [
-                self.socks_version is not SocksVersions.SOCKS4,
+                self.socks_version is not SocksVersions.SOCKS5,
                 self.command is not Socks5Command.CONNECT,
             ],
         )

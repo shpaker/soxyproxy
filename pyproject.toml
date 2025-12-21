@@ -10,16 +10,20 @@ authors = [
   { name = "Aleksandr Shpak", email = "shpaker@gmail.com" },
 ]
 classifiers = [
-  "Topic :: Software Development :: Libraries :: Python Modules",
-  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-  "Topic :: Internet :: Proxy Servers",
   "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Internet :: Proxy Servers",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
 ]
-keywords = ["proxy", "socks", "socks4", "socks4a", "socks4", "socks5h"]
+keywords = ["proxy", "socks", "socks4", "socks4a", "socks5", "socks5h"]
 
 [project.urls]
 Homepage = "https://github.com/shpaker/soxyproxy/"

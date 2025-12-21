@@ -18,7 +18,7 @@ from soxy._types import (
     Resolver,
 )
 
-__title__ = 'winregistry'
+__title__ = 'soxyproxy'
 __version__ = '0.0.0'
 __url__ = 'https://github.com/shpaker/soxyproxy'
 __author__ = 'Aleksandr Shpak'

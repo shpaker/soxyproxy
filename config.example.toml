@@ -1,0 +1,21 @@
+# Пример конфигурации с аутентификацией
+
+[proxy]
+protocol = "socks5"
+transport = "tcp"
+
+# Аутентификация (необязательная)
+# Если секция [proxy.auth] отсутствует, прокси работает без аутентификации
+[proxy.auth]
+alice = "password123"
+bob = "secret456"
+charlie = "mypass789"
+
+[transport]
+host = "127.0.0.1"
+port = 1080
+
+[ruleset]
+connecting = { allow = [], block = [] }
+proxying = { allow = [], block = [] }
+
