@@ -1,15 +1,18 @@
 import inspect
 import typing
-from ipaddress import IPv4Address
 
 from soxy._logger import logger
-from soxy._types import (
-    Resolver,
-    Socks4AsyncAuther,
-    Socks4Auther,
-    Socks5AsyncAuther,
-    Socks5Auther,
-)
+
+if typing.TYPE_CHECKING:
+    from ipaddress import IPv4Address
+
+    from soxy._types import (
+        Resolver,
+        Socks4AsyncAuther,
+        Socks4Auther,
+        Socks5AsyncAuther,
+        Socks5Auther,
+    )
 
 
 def auther_wrapper(

@@ -3,20 +3,23 @@ import tomllib
 import typing
 from contextlib import suppress
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
-from pathlib import Path
 from socket import gethostbyname
 
 from soxy._errors import ConfigError
 from soxy._ruleset import ConnectingRule, ProxyingRule, Ruleset
 from soxy._socks import Socks4, Socks5
 from soxy._tcp import TcpTransport
-from soxy._types import (
-    ProxySocks,
-    Resolver,
-    Socks4Auther,
-    Socks5Auther,
-    Transport,
-)
+
+if typing.TYPE_CHECKING:
+    from pathlib import Path
+
+    from soxy._types import (
+        ProxySocks,
+        Resolver,
+        Socks4Auther,
+        Socks5Auther,
+        Transport,
+    )
 
 _DEFAULTS_PROXY_SECTION = {
     'protocol': 'socks5',
@@ -105,7 +108,7 @@ class Config:
     def _make_connecting_rules(
         self,
         rules: list[dict[str, typing.Any]],
-    ) -> typing.Generator[ConnectingRule, None, None]:
+    ) -> typing.Generator[ConnectingRule]:
         for rule_dict in rules:
             from_ = None
             from_str = rule_dict.get('from')
@@ -136,7 +139,7 @@ class Config:
     def _make_rules(  # noqa: C901, PLR0912
         self,
         rules: list[dict[str, typing.Any]],
-    ) -> typing.Generator[ProxyingRule, None, None]:
+    ) -> typing.Generator[ProxyingRule]:
         for rule_dict in rules:
             from_ = None
             from_str = rule_dict.get('from')

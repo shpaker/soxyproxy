@@ -1,11 +1,15 @@
+from typing import TYPE_CHECKING
+
 from soxy._logger import logger
-from soxy._types import (
-    Address,
-    Connection,
-    IPvAnyAddress,
-    IPvAnyNetwork,
-)
 from soxy._utils import match_addresses
+
+if TYPE_CHECKING:
+    from soxy._types import (
+        Address,
+        Connection,
+        IPvAnyAddress,
+        IPvAnyNetwork,
+    )
 
 
 class ConnectingRule:

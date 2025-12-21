@@ -1,7 +1,10 @@
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
+from typing import TYPE_CHECKING
 
 from soxy._errors import PackageError
-from soxy._types import Address, IPvAnyAddress, IPvAnyNetwork, SocksVersions
+
+if TYPE_CHECKING:
+    from soxy._types import Address, IPvAnyAddress, IPvAnyNetwork, SocksVersions
 
 
 def match_addresses(

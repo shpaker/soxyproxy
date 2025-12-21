@@ -55,7 +55,11 @@ exclude = [
 ]
 lint.flake8-tidy-imports.ban-relative-imports = "all"
 lint.ignore = [
-  "S101", # Too many arguments to function call
+    "S101", # Too many arguments to function call
+    "TC001", # Move application import into type-checking block - too aggressive, breaks runtime
+    "TC003", # Move standard library import into type-checking block - too aggressive, breaks runtime
+    "UP040", # Type alias uses TypeAlias annotation - we need it for Python 3.14 compatibility
+    "UP043", # Unnecessary default type arguments in Generator
 ]
 lint.select = [
   "F", # Pyflakes
