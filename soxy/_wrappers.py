@@ -1,4 +1,4 @@
-import asyncio
+import inspect
 import typing
 from ipaddress import IPv4Address
 
@@ -22,7 +22,7 @@ def auther_wrapper(
         try:
             result: bool = (
                 await _func(*args, **kwargs)  # type: ignore[assignment]
-                if asyncio.iscoroutinefunction(_func)
+                if inspect.iscoroutinefunction(_func)
                 else _func(*args, **kwargs)
             )
         except Exception as exc:  # noqa: BLE001
@@ -41,7 +41,7 @@ def resolver_wrapper(
     ) -> IPv4Address | None:
         try:
             result: IPv4Address | None = (
-                await _func(name) if asyncio.iscoroutinefunction(_func) else _func(name)  # type: ignore[assignment]
+                await _func(name) if inspect.iscoroutinefunction(_func) else _func(name)  # type: ignore[assignment]
             )
         except Exception as exc:  # noqa: BLE001
             logger.exception('Error in resolver_wrapper', exc_info=exc)
