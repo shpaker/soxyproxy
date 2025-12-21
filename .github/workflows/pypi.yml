@@ -18,8 +18,8 @@ jobs:
       - run: sed -i 's/0.0.0/'"${{ steps.extract_name_and_version.outputs.ver }}"'/' pyproject.toml
       - run: head -n 10 pyproject.toml
       - run: sed -i 's/0.0.0/'"${{ steps.extract_name_and_version.outputs.ver }}"'/' soxy/__init__.py
-      - uses: astral-sh/setup-uv@v4
-      - run: uv python install 3.12
+      - uses: astral-sh/setup-uv@v7
+      - run: uv python install 3.14
       - run: uv sync --all-extras --dev
       - run: uv build
       - run: uv publish --username __token__ --password ${{ secrets.PYPI_PASS }}
