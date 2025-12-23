@@ -23,7 +23,7 @@ __version__ = '0.0.0'
 __url__ = 'https://github.com/shpaker/soxyproxy'
 __author__ = 'Aleksandr Shpak'
 __author_email__ = 'shpaker@gmail.com'
-__license__ = 'MIT'
+__license__ = 'GPL-3.0'
 __all__ = [
     'Address',
     'AuthorizationError',
