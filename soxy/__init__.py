@@ -9,6 +9,7 @@ from soxy._errors import (
 )
 from soxy._logger import logger
 from soxy._proxy import Proxy
+from soxy._resolver import SystemResolver
 from soxy._ruleset import ConnectingRule, ProxyingRule, Ruleset
 from soxy._socks import Socks4, Socks5
 from soxy._tcp import TcpTransport
@@ -41,6 +42,7 @@ __all__ = [
     'Ruleset',
     'Socks4',
     'Socks5',
+    'SystemResolver',
     'TcpTransport',
     'logger',
 ]

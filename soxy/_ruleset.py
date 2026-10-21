@@ -49,12 +49,14 @@ class ProxyingRule:
         destination: Address,
         domain_name: str | None,
     ) -> bool:
-        if isinstance(self._to_addresses, str):
-            return not (not isinstance(domain_name, str) or domain_name != self._to_addresses)
-        return match_addresses(
+        if not match_addresses(
             address=client.address,
             match_with=self._from_addresses,
-        ) and match_addresses(
+        ):
+            return False
+        if isinstance(self._to_addresses, str):
+            return domain_name == self._to_addresses
+        return match_addresses(
             address=destination,
             match_with=self._to_addresses,
         )
@@ -82,25 +84,22 @@ class Ruleset:
         self,
         client: Connection,
     ) -> bool:
-        result: bool | None = None
-        for rule in self._allow_connecting_rules:
-            if result := rule(
-                client=client,
-            ):
-                logger.info(f'{client} connecting ALLOWED: {rule}')
-                break
         for rule in self._block_connecting_rules:
-            if result := rule(
+            if rule(
                 client=client,
             ):
                 logger.info(f'{client} connecting BLOCKED: {rule}')
                 return False
-        if result is None:
-            result = False
-            logger.info(
-                f'{client} not found allow-connecting-rule',
-            )
-        return result
+        for rule in self._allow_connecting_rules:
+            if rule(
+                client=client,
+            ):
+                logger.info(f'{client} connecting ALLOWED: {rule}')
+                return True
+        logger.info(
+            f'{client} not found allow-connecting-rule',
+        )
+        return False
 
     def should_allow_proxying(
         self,
@@ -108,26 +107,23 @@ class Ruleset:
         destination: Address,
         domain_name: str | None,
     ) -> bool:
-        result: bool | None = None
-        for rule in self._allow_proxying_rules:
-            if result := rule(
-                client=client,
-                destination=destination,
-                domain_name=domain_name,
-            ):
-                logger.info(f'{client} request ALLOWED by {rule}')
-                break
         for rule in self._block_proxying_rules:
-            if result := rule(
+            if rule(
                 client=client,
                 destination=destination,
                 domain_name=domain_name,
             ):
                 logger.info(f'{client} request BLOCKED by {rule}')
                 return False
-        if result is None:
-            result = False
-            logger.info(
-                f'{client} not found allow-rule for {destination.ip}:{destination.port}',
-            )
-        return result
+        for rule in self._allow_proxying_rules:
+            if rule(
+                client=client,
+                destination=destination,
+                domain_name=domain_name,
+            ):
+                logger.info(f'{client} request ALLOWED by {rule}')
+                return True
+        logger.info(
+            f'{client} not found allow-rule for {destination.ip}:{destination.port}',
+        )
+        return False

@@ -4,7 +4,10 @@ import types
 import typing
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
-Resolver: typing.TypeAlias = typing.Callable[[str], IPv4Address | typing.Awaitable[IPv4Address]]
+Resolver: typing.TypeAlias = typing.Callable[
+    [str],
+    IPv4Address | IPv6Address | typing.Awaitable[IPv4Address | IPv6Address | None] | None,
+]
 
 Socks4Auther: typing.TypeAlias = typing.Callable[[str], bool]
 Socks4AsyncAuther: typing.TypeAlias = typing.Callable[[str], typing.Awaitable[bool]]
@@ -108,6 +111,11 @@ class Connection(
     ) -> Address:
         return self._address
 
+    @property
+    def local_address(
+        self,
+    ) -> Address: ...
+
     @classmethod
     async def open(
         cls,
@@ -117,10 +125,41 @@ class Connection(
     async def read(
         self,
     ) -> bytes: ...
+    async def readexactly(
+        self,
+        n: int,
+    ) -> bytes:
+        """
+        Read exactly n bytes.
+
+        :raises EOFError: if the stream ends before n bytes are read.
+        """
+
+    async def readuntil(
+        self,
+        separator: bytes,
+    ) -> bytes:
+        """
+        Read data until separator is found (separator is included).
+
+        :raises EOFError: if the stream ends before separator is found.
+        """
+
     async def write(
         self,
         data: bytes,
     ) -> None: ...
+    async def write_eof(
+        self,
+    ) -> None:
+        """
+        Close the write end of the stream (half-close).
+        """
+
+
+OnClientConnectedCallback: typing.TypeAlias = typing.Callable[[Connection], typing.Awaitable[Address | None]]
+StartMessagingCallback: typing.TypeAlias = typing.Callable[[Connection, Connection], typing.Awaitable[None]]
+OnRemoteUnreachableCallback: typing.TypeAlias = typing.Callable[[Connection, Address, OSError], typing.Awaitable[None]]
 
 
 class Transport(
@@ -128,18 +167,9 @@ class Transport(
 ):
     def init(
         self,
-        on_client_connected_cb: typing.Callable[
-            [Connection],
-            typing.Awaitable[Address | None],
-        ],
-        start_messaging_cb: typing.Callable[
-            [Connection, Connection],
-            typing.Awaitable[None],
-        ],
-        on_remote_unreachable_cb: typing.Callable[
-            [Connection, Address],
-            typing.Awaitable[None],
-        ],
+        on_client_connected_cb: OnClientConnectedCallback,
+        start_messaging_cb: StartMessagingCallback,
+        on_remote_unreachable_cb: OnRemoteUnreachableCallback,
     ) -> None: ...
 
     def __repr__(
@@ -184,4 +214,5 @@ class ProxySocks(
         self,
         client: Connection,
         destination: Address,
+        error: OSError | None = None,
     ) -> None: ...

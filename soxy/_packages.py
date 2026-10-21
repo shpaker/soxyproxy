@@ -1,3 +1,4 @@
+import asyncio
 import struct
 import typing
 from abc import ABC, abstractmethod
@@ -57,11 +58,44 @@ class _BaseRequestPackage(
         cls,
         client: Connection,
     ) -> typing.Self:
-        data = await client.read()
+        try:
+            data = await cls._read(client)
+        except EOFError as exc:
+            raise PackageError(getattr(exc, 'partial', b'')) from exc
+        except asyncio.LimitOverrunError as exc:
+            raise PackageError(data=b'') from exc
         return cls(
             client=client,
             data=data,
         )
+
+    @classmethod
+    @abstractmethod
+    async def _read(
+        cls,
+        client: Connection,
+    ) -> bytes:
+        """
+        Read exactly one package from the client stream.
+        """
+        raise NotImplementedError
+
+
+async def _read_version(
+    client: Connection,
+    version: SocksVersions,
+) -> bytes:
+    data = await client.readexactly(1)
+    if data[0] != version:
+        raise PackageError(data)
+    return data
+
+
+def _is_socks4a_address(
+    raw_address: bytes,
+) -> bool:
+    # SOCKS4a: 0.0.0.x, where x is nonzero
+    return raw_address[:3] == b'\x00\x00\x00' and raw_address[3] != 0
 
 
 class _BaseResponsePackage(
@@ -102,6 +136,18 @@ class Socks4Request(
             client=client,
             data=data,
         )
+
+    @classmethod
+    async def _read(
+        cls,
+        client: Connection,
+    ) -> bytes:
+        data = await _read_version(client, SocksVersions.SOCKS4)
+        data += await client.readexactly(7)
+        data += await client.readuntil(b'\x00')
+        if _is_socks4a_address(data[4:8]):
+            data += await client.readuntil(b'\x00')
+        return data
 
     def _validate(
         self,
@@ -156,7 +202,7 @@ class Socks4Request(
     ) -> bool:
         if self._is_socks4a:
             return self._is_socks4a
-        self._is_socks4a = isinstance(self.destination.ip, IPv4Address) and self.destination.ip <= IPv4Address(0xFF)
+        self._is_socks4a = _is_socks4a_address(self.destination.ip.packed)
         return self._is_socks4a
 
     @property
@@ -211,7 +257,8 @@ class Socks4Response(
         super().__init__(client)
         self._reply = reply
         self._destination = destination
-        self._data = bytes([0, reply.value]) + port_to_bytes(destination.port) + destination.ip.packed
+        ip = destination.ip if isinstance(destination.ip, IPv4Address) else IPv4Address(0)
+        self._data = bytes([0, reply.value]) + port_to_bytes(destination.port) + ip.packed
 
     @property
     def destination(
@@ -241,13 +288,22 @@ class Socks5GreetingRequest(
             data=data,
         )
 
+    @classmethod
+    async def _read(
+        cls,
+        client: Connection,
+    ) -> bytes:
+        data = await _read_version(client, SocksVersions.SOCKS5)
+        data += await client.readexactly(1)
+        return data + await client.readexactly(data[1])
+
     def _validate(
         self,
     ) -> bool:
         return not any(
             [
                 self.socks_version is not SocksVersions.SOCKS5,
-                self.methods_num != len(self.methods),
+                self.methods_num != len(self._data) - 2,
             ]
         )
 
@@ -279,10 +335,10 @@ class Socks5GreetingRequest(
     ) -> list[Socks5AuthMethod]:
         if self._methods:
             return self._methods
-        try:
-            self._methods = [Socks5AuthMethod(raw_method) for raw_method in list(self._data[2:])]
-        except (IndexError, ValueError) as exc:
-            raise PackageError(self.data) from exc
+        # unknown methods are skipped (RFC 1928 allows private and unassigned ones)
+        self._methods = [
+            Socks5AuthMethod(raw_method) for raw_method in self._data[2:] if raw_method in Socks5AuthMethod
+        ]
         return self._methods
 
 
@@ -330,14 +386,25 @@ class Socks5AuthorizationRequest(
             data=data,
         )
 
+    @classmethod
+    async def _read(
+        cls,
+        client: Connection,
+    ) -> bytes:
+        data = await client.readexactly(2)
+        data += await client.readexactly(data[1])
+        password_length = await client.readexactly(1)
+        return data + password_length + await client.readexactly(password_length[0])
+
     def _validate(
         self,
     ) -> bool:
         return all(
             [
                 self._data[0] == 1,
-                self._username_length == len(self.username),
-                self._password_length == len(self.password),
+                len(self._data) == 3 + self._username_length + self._password_length,
+                isinstance(self.username, str),
+                isinstance(self.password, str),
             ]
         )
 
@@ -411,15 +478,30 @@ class Socks5ConnectionRequest(
             data=data,
         )
 
+    @classmethod
+    async def _read(
+        cls,
+        client: Connection,
+    ) -> bytes:
+        data = await _read_version(client, SocksVersions.SOCKS5)
+        data += await client.readexactly(3)
+        match data[3]:
+            case Socks5AddressType.IPv4:
+                data += await client.readexactly(IPV4LENGTH // 8)
+            case Socks5AddressType.IPv6:
+                data += await client.readexactly(IPV6LENGTH // 8)
+            case Socks5AddressType.DOMAIN:
+                domain_name_length = await client.readexactly(1)
+                data += domain_name_length + await client.readexactly(domain_name_length[0])
+            case _:
+                # unknown address type: the rest of the request can't be parsed
+                return data
+        return data + await client.readexactly(2)
+
     def _validate(
         self,
     ) -> bool:
-        return not any(
-            [
-                self.socks_version is not SocksVersions.SOCKS5,
-                self.command is not Socks5Command.CONNECT,
-            ],
-        )
+        return self.socks_version is SocksVersions.SOCKS5
 
     @property
     def socks_version(

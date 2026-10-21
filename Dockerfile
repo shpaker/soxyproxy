@@ -1,31 +1,20 @@
-FROM python:3.14-alpine AS base-image
-ARG VERSION
+FROM python:3.15-alpine AS base-image
+ARG VERSION=0.0.0
+COPY --from=ghcr.io/astral-sh/uv:0.13.4 /uv /bin/uv
+ENV UV_PYTHON_DOWNLOADS=never
 WORKDIR /service
 
-# Install build dependencies
-RUN apk add --no-cache --virtual .build-deps \
-    gcc \
-    musl-dev \
-    libffi-dev \
-    cargo \
-    rust
-
-# Install UV
-RUN pip install --no-cache-dir uv
-
 # Add project files
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml README.md ./
 COPY soxy ./soxy
 
-# Install dependencies and build the project
-RUN uv sync --no-dev && \
-    uv build
+# Build the package and install it into a virtual environment
+RUN sed -i "s/0\.0\.0/${VERSION}/" pyproject.toml soxy/__init__.py && \
+    uv build --wheel --out-dir dist && \
+    uv venv .venv && \
+    uv pip install --python .venv/bin/python --no-cache --compile-bytecode dist/*.whl
 
-# Create virtual environment and install the built package
-RUN python -m venv .venv && \
-    .venv/bin/pip install dist/*.whl
-
-FROM python:3.14-alpine AS runtime-image
+FROM python:3.15-alpine AS runtime-image
 WORKDIR /service
 
 # Copy virtual environment from the build stage

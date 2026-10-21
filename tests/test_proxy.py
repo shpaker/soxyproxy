@@ -73,13 +73,28 @@ async def test_start_messaging_transport_cb(proxy: Proxy) -> None:
     remote = MagicMock(spec=Connection)
     proxy._protocol.success = AsyncMock()
     await proxy._start_messaging_transport_cb(client, remote)
-    proxy._protocol.success.assert_called_once_with(client=client, destination=remote.address)
+    proxy._protocol.success.assert_called_once_with(client=client, destination=remote.local_address)
 
 
 @pytest.mark.asyncio
 async def test_on_remote_connection_unreachable_cb(proxy: Proxy) -> None:
     client = MagicMock(spec=Connection)
     destination = Address('127.0.0.1', 8080)
+    error = ConnectionRefusedError()
     proxy._protocol.target_unreachable = AsyncMock()
-    await proxy._on_remote_connection_unreachable_cb(client, destination)
-    proxy._protocol.target_unreachable.assert_called_once_with(client=client, destination=destination)
+    await proxy._on_remote_connection_unreachable_cb(client, destination, error)
+    proxy._protocol.target_unreachable.assert_called_once_with(client=client, destination=destination, error=error)
+
+
+@pytest.mark.asyncio
+async def test_proxy_aenter_returns_proxy(proxy: Proxy) -> None:
+    server = MagicMock()
+    proxy._transport.__aenter__ = AsyncMock(return_value=server)
+    assert await proxy.__aenter__() is proxy
+    assert proxy.sockets is server.sockets
+
+
+@pytest.mark.asyncio
+async def test_proxy_serve_forever_not_started(proxy: Proxy) -> None:
+    with pytest.raises(RuntimeError):
+        await proxy.serve_forever()

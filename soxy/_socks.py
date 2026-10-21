@@ -1,3 +1,4 @@
+import errno
 import typing
 from abc import ABC, abstractmethod
 
@@ -19,20 +20,20 @@ from soxy._packages import (
 from soxy._types import (
     Address,
     Connection,
+    IPvAnyAddress,
     Resolver,
     Socks4AsyncAuther,
     Socks4Auther,
     Socks4Command,
     Socks4Reply,
+    Socks5AddressType,
     Socks5AsyncAuther,
     Socks5Auther,
     Socks5AuthMethod,
+    Socks5Command,
     Socks5ConnectionReply,
 )
 from soxy._wrappers import auther_wrapper, resolver_wrapper
-
-if typing.TYPE_CHECKING:
-    from ipaddress import IPv4Address
 
 
 class _BaseSocks(
@@ -51,9 +52,22 @@ class _BaseSocks(
 
         :param resolver: Optional resolver for domain name resolution.
         """
-        self._resolver: typing.Callable[[str], typing.Awaitable[IPv4Address | None]] | None = (
+        self._resolver: typing.Callable[[str], typing.Awaitable[IPvAnyAddress | None]] | None = (
             (resolver_wrapper(resolver)) if resolver else None
         )
+
+    @abstractmethod
+    async def ruleset_reject(
+        self,
+        client: Connection,
+        destination: Address,
+    ) -> None:
+        """
+        Handle ruleset rejection.
+
+        :param client: Client connection.
+        :param destination: Destination address.
+        """
 
     @abstractmethod
     async def success(
@@ -73,12 +87,14 @@ class _BaseSocks(
         self,
         client: Connection,
         destination: Address,
+        error: OSError | None = None,
     ) -> None:
         """
         Handle unreachable target.
 
         :param client: Client connection.
         :param destination: Destination address.
+        :param error: Error raised on connecting to the target.
         """
 
     @abstractmethod
@@ -112,9 +128,7 @@ class Socks4(
         :param auther: Optional authorizer for SOCKS4.
         :param resolver: Optional resolver for domain name resolution.
         """
-        self._auther: Socks4AsyncAuther | None = (
-            auther_wrapper(auther) if auther else None  # type: ignore[assignment]
-        )
+        self._auther: Socks4AsyncAuther | None = auther_wrapper(auther) if auther else None
         super().__init__(
             resolver=resolver,
         )
@@ -157,12 +171,14 @@ class Socks4(
         self,
         client: Connection,
         destination: Address,
+        error: OSError | None = None,  # noqa: ARG002
     ) -> None:
         """
         Handle unreachable target.
 
         :param client: Client connection.
         :param destination: Destination address.
+        :param error: Error raised on connecting to the target.
         """
         await Socks4Response(
             client=client,
@@ -297,9 +313,7 @@ class Socks5(
         super().__init__(
             resolver=resolver,
         )
-        self._auther: Socks5AsyncAuther | None = (
-            auther_wrapper(auther) if auther else None  # type: ignore[assignment]
-        )
+        self._auther: Socks5AsyncAuther | None = auther_wrapper(auther) if auther else None
         self._allowed_auth_method = Socks5AuthMethod.USERNAME if auther else Socks5AuthMethod.NO_AUTHENTICATION
 
     async def __call__(
@@ -318,10 +332,7 @@ class Socks5(
         )
         await greetings_response.to_client()
         if greetings_response.method is Socks5AuthMethod.NO_ACCEPTABLE:
-            await Socks5ConnectionResponse(
-                client=client,
-                reply=Socks5ConnectionReply.CONNECTION_REFUSED,
-            ).to_client()
+            # RFC 1928: the client MUST close the connection
             raise RejectError
         if self._auther:
             authorization_request = await Socks5AuthorizationRequest.from_client(client)
@@ -331,19 +342,42 @@ class Socks5(
                 raise AuthorizationError(
                     username=authorization_request.username,
                 )
+        request = await Socks5ConnectionRequest.from_client(client)
+        if (reply := self._check_request(request)) is not None:
+            await Socks5ConnectionResponse(
+                client=client,
+                reply=reply,
+            ).to_client()
+            raise RejectError
         try:
-            data = await self._connect(
-                await Socks5ConnectionRequest.from_client(client),
-            )
+            data = await self._connect(request)
         except RejectError as exc:
             await Socks5ConnectionResponse(
                 client=client,
-                reply=Socks5ConnectionReply.CONNECTION_REFUSED,
+                reply=Socks5ConnectionReply.HOST_UNREACHABLE,
                 destination=exc.address.ip,
                 port=exc.address.port,
             ).to_client()
             raise
         return data
+
+    async def ruleset_reject(
+        self,
+        client: Connection,
+        destination: Address,
+    ) -> None:
+        """
+        Handle ruleset rejection.
+
+        :param client: Client connection.
+        :param destination: Destination address.
+        """
+        await Socks5ConnectionResponse(
+            client=client,
+            reply=Socks5ConnectionReply.CONNECTION_NOT_ALLOWED_BY_RULESET,
+            destination=destination.ip,
+            port=destination.port,
+        ).to_client()
 
     async def success(
         self,
@@ -367,19 +401,56 @@ class Socks5(
         self,
         client: Connection,
         destination: Address,
+        error: OSError | None = None,
     ) -> None:
         """
         Handle unreachable target.
 
         :param client: Client connection.
         :param destination: Destination address.
+        :param error: Error raised on connecting to the target.
         """
         await Socks5ConnectionResponse(
             client=client,
-            reply=Socks5ConnectionReply.HOST_UNREACHABLE,
+            reply=self._error_reply(error),
             destination=destination.ip,
             port=destination.port,
         ).to_client()
+
+    @staticmethod
+    def _error_reply(
+        error: OSError | None,
+    ) -> Socks5ConnectionReply:
+        """
+        Map connection error to SOCKS5 reply.
+
+        :param error: Error raised on connecting to the target.
+        :return: SOCKS5 connection reply.
+        """
+        match error:
+            case ConnectionRefusedError():
+                return Socks5ConnectionReply.CONNECTION_REFUSED
+            case OSError(errno=errno.ENETUNREACH):
+                return Socks5ConnectionReply.NETWORK_UNREACHABLE
+        return Socks5ConnectionReply.HOST_UNREACHABLE
+
+    def _check_request(
+        self,
+        request: Socks5ConnectionRequest,
+    ) -> Socks5ConnectionReply | None:
+        """
+        Check that the request is supported.
+
+        :param request: SOCKS5 connection request.
+        :return: SOCKS5 error reply or None if the request is supported.
+        """
+        if request.data[1] != Socks5Command.CONNECT:
+            return Socks5ConnectionReply.COMMAND_NOT_SUPPORTED
+        if request.data[3] not in Socks5AddressType:
+            return Socks5ConnectionReply.ADDRESS_TYPE_NOT_SUPPORTED
+        if request.is_socks5h and self._resolver is None:
+            return Socks5ConnectionReply.ADDRESS_TYPE_NOT_SUPPORTED
+        return None
 
     def _greetings(
         self,

@@ -1,166 +1,140 @@
 import asyncio
-import contextlib
-from unittest.mock import AsyncMock, MagicMock
+import typing
 
 import pytest
 
 from soxy._session import Session
-from soxy._types import Connection
+
+
+class FakeConnection:
+    def __init__(
+        self,
+        name: str,
+    ) -> None:
+        self.name = name
+        self.incoming: asyncio.Queue[bytes | BaseException] = asyncio.Queue()
+        self.written = bytearray()
+        self.eof_written = asyncio.Event()
+        self.writable = asyncio.Event()
+        self.writable.set()
+
+    def __repr__(
+        self,
+    ) -> str:
+        return f'<{self.name}>'
+
+    def feed(
+        self,
+        *items: bytes | BaseException,
+    ) -> None:
+        for item in items:
+            self.incoming.put_nowait(item)
+
+    async def read(
+        self,
+    ) -> bytes:
+        item = await self.incoming.get()
+        if isinstance(item, BaseException):
+            raise item
+        return item
+
+    async def write(
+        self,
+        data: bytes,
+    ) -> None:
+        await self.writable.wait()
+        self.written += data
+
+    async def write_eof(
+        self,
+    ) -> None:
+        self.eof_written.set()
+
+
+async def wait_until(
+    condition: typing.Callable[[], bool],
+) -> None:
+    async with asyncio.timeout(1):
+        while not condition():  # noqa: ASYNC110
+            await asyncio.sleep(0.001)
 
 
 @pytest.fixture
-def mock_client() -> Connection:
-    client = MagicMock(spec=Connection)
-    client.read = AsyncMock(return_value=b'client data')
-    return client
+def client() -> FakeConnection:
+    return FakeConnection('client')
 
 
 @pytest.fixture
-def mock_remote() -> Connection:
-    remote = MagicMock(spec=Connection)
-    remote.read = AsyncMock(return_value=b'remote data')
-    return remote
+def remote() -> FakeConnection:
+    return FakeConnection('remote')
 
 
 @pytest.mark.asyncio
-async def test_session_init(mock_client: Connection, mock_remote: Connection) -> None:
-    session = Session(client=mock_client, remote=mock_remote)
-    assert session._client == mock_client  # noqa: SLF001
-    assert session._remote == mock_remote  # noqa: SLF001
-    assert session._finished is True  # noqa: SLF001
-    assert session._tasks == {}  # noqa: SLF001
+async def test_session_relays_both_directions(client: FakeConnection, remote: FakeConnection) -> None:
+    client.feed(b'hello', b' world', b'')
+    remote.feed(b'response', b'')
+    async with Session(client=client, remote=remote) as session:  # type: ignore[arg-type]
+        await asyncio.wait_for(session.start(), timeout=1)
+    assert remote.written == b'hello world'
+    assert client.written == b'response'
+    assert remote.eof_written.is_set()
+    assert client.eof_written.is_set()
+    assert session.sent == len(b'hello world')
+    assert session.received == len(b'response')
 
 
 @pytest.mark.asyncio
-async def test_session_aenter(mock_client: Connection, mock_remote: Connection) -> None:
-    session = Session(client=mock_client, remote=mock_remote)
-    async with session:
-        assert session._finished is False  # noqa: SLF001
-        expected_tasks_count = 2
-        assert len(session._tasks) == expected_tasks_count  # noqa: SLF001
-        assert mock_client in session._tasks  # noqa: SLF001
-        assert mock_remote in session._tasks  # noqa: SLF001
-
-
-@pytest.mark.asyncio
-async def test_session_connections(mock_client: Connection, mock_remote: Connection) -> None:
-    session = Session(client=mock_client, remote=mock_remote)
-    async with session:
-        connections = session.connections
-        expected_connections_count = 2
-        assert len(connections) == expected_connections_count
-        assert mock_client in connections
-        assert mock_remote in connections
-
-
-@pytest.mark.asyncio
-async def test_session_aexit_cancels_tasks(mock_client: Connection, mock_remote: Connection) -> None:
-    session = Session(client=mock_client, remote=mock_remote)
-    async with session:
-        tasks = list(session._tasks.values())  # noqa: SLF001
-        assert all(not task.done() for task in tasks)
-
-    # After exit, tasks should be cancelled
-    await asyncio.sleep(0.01)
-    assert all(task.cancelled() for task in tasks)
-
-
-@pytest.mark.asyncio
-async def test_session_wait_tasks_with_data(mock_client: Connection, mock_remote: Connection) -> None:
-    session = Session(client=mock_client, remote=mock_remote)
-    mock_remote.write = AsyncMock()
-
-    async with session:
-        # Simulate client reading data
-        session._tasks[mock_client].cancel()  # noqa: SLF001
-        await asyncio.wait_for(asyncio.sleep(0.01), timeout=1.0)
-
-        # Manually call _wait_tasks to test it
-        # This is tricky because it's called in start(), so we'll test start() instead
-
-
-@pytest.mark.asyncio
-async def test_session_wait_tasks_empty_data(mock_client: Connection, mock_remote: Connection) -> None:
-    mock_client.read = AsyncMock(return_value=b'')
-    mock_remote.read = AsyncMock(return_value=b'')
-    session = Session(client=mock_client, remote=mock_remote)
-
-    async with session:
-        # Manually trigger _wait_tasks to test empty data handling
-        session._finished = False  # noqa: SLF001
-        await asyncio.wait_for(session._wait_tasks(), timeout=5.0)  # noqa: SLF001
-        # Session should finish when empty data is received
-        assert session._finished is True  # noqa: SLF001
-
-
-@pytest.mark.asyncio
-async def test_session_start_basic_flow(mock_client: Connection, mock_remote: Connection) -> None:
-    call_count = {'client': 0, 'remote': 0}
-
-    async def client_read() -> bytes:
-        call_count['client'] += 1
-        if call_count['client'] == 1:
-            return b'client message'
-        return b''  # Signal end
-
-    async def remote_read() -> bytes:
-        call_count['remote'] += 1
-        if call_count['remote'] == 1:
-            return b'remote message'
-        return b''  # Signal end
-
-    mock_client.read = AsyncMock(side_effect=client_read)
-    mock_remote.read = AsyncMock(side_effect=remote_read)
-    mock_client.write = AsyncMock()
-    mock_remote.write = AsyncMock()
-
-    session = Session(client=mock_client, remote=mock_remote)
-
-    async with session:
-        # Start session in background
+async def test_session_half_close(client: FakeConnection, remote: FakeConnection) -> None:
+    client.feed(b'request', b'')
+    async with Session(client=client, remote=remote) as session:  # type: ignore[arg-type]
         task = asyncio.create_task(session.start())
-
-        # Wait for session to process data and finish (empty data should stop it)
-        try:
-            await asyncio.wait_for(task, timeout=5.0)
-        except asyncio.TimeoutError:
-            # If timeout, cancel and wait for cancellation
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await asyncio.wait_for(task, timeout=1.0)
+        await asyncio.wait_for(remote.eof_written.wait(), timeout=1)
+        assert not task.done()
+        remote.feed(b'response', b'')
+        await asyncio.wait_for(task, timeout=1)
+    assert remote.written == b'request'
+    assert client.written == b'response'
 
 
 @pytest.mark.asyncio
-async def test_session_data_forwarding(mock_client: Connection, mock_remote: Connection) -> None:
-    mock_client.read = AsyncMock(return_value=b'forward this')
-    mock_remote.write = AsyncMock()
-
-    session = Session(client=mock_client, remote=mock_remote)
-
-    async with session:
-        # Manually trigger data forwarding
-        session._finished = False  # noqa: SLF001
-        await asyncio.wait_for(session._wait_tasks(), timeout=5.0)  # noqa: SLF001
-
-        # Check that remote.write was called with client data
-        mock_remote.write.assert_called_once_with(b'forward this')
+async def test_session_backpressure_does_not_block_other_direction(
+    client: FakeConnection,
+    remote: FakeConnection,
+) -> None:
+    remote.writable.clear()
+    client.feed(b'upload')
+    remote.feed(b'download')
+    async with Session(client=client, remote=remote) as session:  # type: ignore[arg-type]
+        task = asyncio.create_task(session.start())
+        await wait_until(lambda: client.written == b'download')
+        assert remote.written == b''
+        remote.writable.set()
+        await wait_until(lambda: remote.written == b'upload')
+        client.feed(b'')
+        remote.feed(b'')
+        await asyncio.wait_for(task, timeout=1)
 
 
 @pytest.mark.asyncio
-async def test_session_timeout_error_handling(mock_client: Connection, mock_remote: Connection) -> None:
-    async def slow_read() -> bytes:
-        await asyncio.sleep(0.1)  # Simulate slow read (reduced from 10s to avoid hanging)
-        return b'data'
+async def test_session_connection_error_finishes_session(client: FakeConnection, remote: FakeConnection) -> None:
+    remote.feed(ConnectionResetError())
+    async with Session(client=client, remote=remote) as session:  # type: ignore[arg-type]
+        await asyncio.wait_for(session.start(), timeout=1)
 
-    mock_client.read = AsyncMock(side_effect=slow_read)
-    mock_remote.read = AsyncMock(side_effect=slow_read)
 
-    session = Session(client=mock_client, remote=mock_remote)
+@pytest.mark.asyncio
+async def test_session_unexpected_error_is_raised(client: FakeConnection, remote: FakeConnection) -> None:
+    remote.feed(ValueError('boom'))
+    async with Session(client=client, remote=remote) as session:  # type: ignore[arg-type]
+        with pytest.raises(ExceptionGroup):
+            await asyncio.wait_for(session.start(), timeout=1)
 
-    async with session:
-        # Start with timeout
+
+@pytest.mark.asyncio
+async def test_session_cancellation_is_propagated(client: FakeConnection, remote: FakeConnection) -> None:
+    async with Session(client=client, remote=remote) as session:  # type: ignore[arg-type]
         task = asyncio.create_task(session.start())
         await asyncio.sleep(0.01)
         task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await asyncio.wait_for(task, timeout=5.0)
+        with pytest.raises(asyncio.CancelledError):
+            await task

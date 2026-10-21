@@ -8,71 +8,62 @@ on:
 jobs:
   docker-build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     env:
       REGISTRY_HOST: ghcr.io
     steps:
-      -
-        name: Checkout
-        uses: actions/checkout@v2
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      -
-        name: Login to ${{ env.REGISTRY_HOST }}
-        uses: docker/login-action@v1
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Login to ${{ env.REGISTRY_HOST }}
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY_HOST }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      -
-        name: Extract version info
-        shell: bash
-        run: |
-          echo "##[set-output name=name;]$(echo ${GITHUB_REPOSITORY#*/})"
-          echo "##[set-output name=ver;]$(echo ${GITHUB_REF#refs/*/})"
-          echo "##[set-output name=minor_ver;]$(TMP_VAR=${GITHUB_REF#refs/*/}; echo ${TMP_VAR%.*})"
-          echo "##[set-output name=major_ver;]$(TMP_VAR=${GITHUB_REF#refs/*/}; echo ${TMP_VAR%.*.*})"
-          echo "##[set-output name=sha;]$(git rev-parse --short "$GITHUB_SHA")"
-        id: extract_name_and_version
-      -
-        name: Build and push
-        uses: docker/build-push-action@v2
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY_HOST }}/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=,format=short
+            type=semver,pattern={{major}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}}
+      - name: Build and push
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: |
-            "${{ env.REGISTRY_HOST }}/${{ github.repository }}:latest"
-            "${{ env.REGISTRY_HOST }}/${{ github.repository }}:${{ steps.extract_name_and_version.outputs.sha }}"
-            "${{ env.REGISTRY_HOST }}/${{ github.repository }}:${{ steps.extract_name_and_version.outputs.major_ver }}"
-            "${{ env.REGISTRY_HOST }}/${{ github.repository }}:${{ steps.extract_name_and_version.outputs.minor_ver }}"
-            "${{ env.REGISTRY_HOST }}/${{ github.repository }}:${{ steps.extract_name_and_version.outputs.ver }}"
-          labels:
-            "org.opencontainers.image.source=https://github.com/${{ github.repository }}"
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VERSION=${{ steps.extract_name_and_version.outputs.ver }}
-          cache-from: type=registry,ref=${{ env.REGISTRY_HOST }}/${{ github.repository }}:${{ steps.extract_name_and_version.outputs.minor_ver }}
-          cache-to: type=inline
+            VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   pypi-publish:
     needs: docker-build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ github.ref_name }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Extract version
-        shell: bash
-        run: |
-          echo "##[set-output name=ver;]$(echo ${GITHUB_REF#refs/*/})"
-        id: extract_name_and_version
-      - run: sed -i 's/0.0.0/'"${{ steps.extract_name_and_version.outputs.ver }}"'/' pyproject.toml
+      - uses: actions/checkout@v7
+      - run: sed -i "s/0\.0\.0/${VERSION}/" pyproject.toml soxy/__init__.py
       - run: head -n 10 pyproject.toml
-      - run: sed -i 's/0.0.0/'"${{ steps.extract_name_and_version.outputs.ver }}"'/' soxy/__init__.py
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10.3.0
       - run: uv python install 3.14
-      - run: uv sync --all-extras --dev
       - run: uv build
-      - run: uv publish --username __token__ --password ${{ secrets.PYPI_PASS }}
-
+      - run: uv publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_PASS }}

@@ -8,19 +8,22 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    env:
-      SOURCES_DIR: sources
     strategy:
+      fail-fast: false
       matrix:
         just-trigger:
           - "lint"
+          - "typecheck"
           - "tests-ci"
         python-version:
           - "3.14"
+          - "3.15"
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: extractions/setup-just@v3
-      - uses: astral-sh/setup-uv@v7
+      - uses: actions/checkout@v7
+      - uses: extractions/setup-just@v4
+      - uses: astral-sh/setup-uv@v10.3.0
       - run: uv python install ${{ matrix.python-version }}
       - run: uv sync --all-extras --dev
       - run: just ${{ matrix.just-trigger }}
