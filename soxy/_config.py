@@ -116,16 +116,16 @@ class Config:
                 continue
             try:
                 from_ = IPv4Address(from_str)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 try:
                     from_ = IPv4Network(from_str)
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     try:
                         from_ = IPv6Address(from_str)
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         try:
                             from_ = IPv6Network(from_str)
-                        except (ValueError, TypeError):
+                        except ValueError, TypeError:
                             continue
             if not isinstance(
                 from_,
@@ -147,16 +147,16 @@ class Config:
                 continue
             try:
                 from_ = IPv4Address(from_str)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 try:
                     from_ = IPv4Network(from_str)
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     try:
                         from_ = IPv6Address(from_str)
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         try:
                             from_ = IPv6Network(from_str)
-                        except (ValueError, TypeError):
+                        except ValueError, TypeError:
                             continue
             if not isinstance(
                 from_,

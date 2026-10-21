@@ -20,7 +20,7 @@ This project is actively developed on a periodic basis and is maintained as a ho
 
 ## Requirements
 
-- Python >= 3.14
+- Python >= 3.14 (tested on 3.14 and 3.15)
 
 ## 🛩️ Installation
 
@@ -69,10 +69,10 @@ soxy config.toml -l logs.txt
 # SOCKS5 (without authentication)
 curl -x "socks5://127.0.0.1:1080" https://google.com -v
 
-# SOCKS5h (with domain resolution on proxy side)
+# SOCKS5h (domain is resolved on the proxy side, requires protocol = "socks5h")
 curl -x "socks5h://127.0.0.1:1080" https://google.com -v
 
-# SOCKS5 with authentication (if configured)
+# SOCKS5 with authentication (requires the [proxy.auth] section, see below)
 curl -x "socks5://alice:password123@127.0.0.1:1080" https://google.com -v
 ```
 
@@ -91,7 +91,7 @@ logging.basicConfig(level=logging.INFO)
 
 def auther(username: str, password: str) -> bool:
     """Simple authentication function."""
-    return username == "user" and password == "pass"
+    return username == 'user' and password == 'pass'
 
 
 def resolver(domain_name: str) -> IPv4Address:
@@ -105,17 +105,17 @@ async def main() -> None:
             auther=auther,
             resolver=resolver,  # Required for SOCKS5h and SOCKS4a
         ),
-        transport=soxy.TcpTransport(host="127.0.0.1", port=1080),
+        transport=soxy.TcpTransport(host='127.0.0.1', port=1080),
         ruleset=soxy.Ruleset(
             allow_connecting_rules=[
                 soxy.ConnectingRule(
-                    from_addresses=IPv4Address("127.0.0.1"),
+                    from_addresses=IPv4Address('127.0.0.1'),
                 )
             ],
             allow_proxying_rules=[
                 soxy.ProxyingRule(
-                    from_addresses=IPv4Address("127.0.0.1"),
-                    to_addresses=IPv4Network("0.0.0.0/0"),
+                    from_addresses=IPv4Address('127.0.0.1'),
+                    to_addresses=IPv4Network('0.0.0.0/0'),
                 ),
             ],
         ),
@@ -123,7 +123,7 @@ async def main() -> None:
         await app.serve_forever()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(main())
 ```
 
@@ -132,27 +132,27 @@ if __name__ == "__main__":
 socks5:
 
 ```shell
-curl -x "socks5://top:secret@127.0.0.1:1080" https://google.com -v
+curl -x "socks5://user:pass@127.0.0.1:1080" https://google.com -v
 ```
 
 socks5h:
 
 ```shell
-curl -x "socks5h://top:secret@127.0.0.1:1080" https://google.com -v
+curl -x "socks5h://user:pass@127.0.0.1:1080" https://google.com -v
 ```
 
 ## Configuration
 
 ### Configuration File Structure
 
-Configuration is specified in TOML format and consists of three main sections:
+Configuration is specified in TOML format and consists of three main sections: `[proxy]` (optional), `[transport]` and `[ruleset]` (required).
 
-#### `[proxy]`
+#### `[proxy]` (optional)
 
 Proxy server settings:
 
-- `protocol` (string): SOCKS protocol (`"socks4"`, `"socks4a"`, `"socks5"`, `"socks5h"`)
-- `transport` (string): Transport protocol (currently only `"tcp"`)
+- `protocol` (string): SOCKS protocol (`"socks4"`, `"socks4a"`, `"socks5"`, `"socks5h"`), default `"socks5"`. With `"socks4a"` and `"socks5h"` domain names are resolved on the proxy side
+- `transport` (string): Transport protocol (currently only `"tcp"`), default `"tcp"`
 
 #### `[proxy.auth]` (optional)
 
@@ -258,9 +258,12 @@ charlie = "mypass789"
 host = "127.0.0.1"
 port = 1080
 
-[ruleset]
-connecting = { allow = [], block = [] }
-proxying = { allow = [], block = [] }
+[[ruleset.connecting.allow]]
+from = "127.0.0.1"
+
+[[ruleset.proxying.allow]]
+from = "127.0.0.1"
+to = "0.0.0.0/0"
 ```
 
 For SOCKS4/SOCKS4a (username only, no password):
@@ -286,23 +289,26 @@ async def async_auther(username: str, password: str) -> bool:
     # ...
     return True
 
+
 # Or synchronous function
 def sync_auther(username: str, password: str) -> bool:
     return username in allowed_users and check_password(username, password)
+
 
 protocol = soxy.Socks5(auther=async_auther)  # or sync_auther
 ```
 
 ### Custom Resolver
 
-For working with domain names (SOCKS5h, SOCKS4a), a resolver is required:
+For working with domain names (SOCKS5h, SOCKS4a), a resolver is required. It can be a regular or an async function; regular functions are run in a separate thread, so blocking calls like `socket.gethostbyname` don't block the event loop:
 
 ```python
 async def custom_resolver(domain_name: str) -> IPv4Address | None:
     # Custom resolution logic
     # For example, using DNS-over-HTTPS
     # ...
-    return IPv4Address("1.2.3.4")
+    return IPv4Address('1.2.3.4')
+
 
 protocol = soxy.Socks5(
     resolver=custom_resolver,
@@ -318,25 +324,25 @@ ruleset = soxy.Ruleset(
     # Allow connections only from local address
     allow_connecting_rules=[
         soxy.ConnectingRule(
-            from_addresses=IPv4Address("127.0.0.1"),
+            from_addresses=IPv4Address('127.0.0.1'),
         ),
     ],
     # Allow proxying to any addresses
     allow_proxying_rules=[
         soxy.ProxyingRule(
-            from_addresses=IPv4Address("127.0.0.1"),
-            to_addresses=IPv4Network("0.0.0.0/0"),
+            from_addresses=IPv4Address('127.0.0.1'),
+            to_addresses=IPv4Network('0.0.0.0/0'),
         ),
     ],
     # Block proxying to internal networks
     block_proxying_rules=[
         soxy.ProxyingRule(
-            from_addresses=IPv4Network("0.0.0.0/0"),
-            to_addresses=IPv4Network("10.0.0.0/8"),
+            from_addresses=IPv4Network('0.0.0.0/0'),
+            to_addresses=IPv4Network('10.0.0.0/8'),
         ),
         soxy.ProxyingRule(
-            from_addresses=IPv4Network("0.0.0.0/0"),
-            to_addresses=IPv4Network("192.168.0.0/16"),
+            from_addresses=IPv4Network('0.0.0.0/0'),
+            to_addresses=IPv4Network('192.168.0.0/16'),
         ),
     ],
 )
@@ -358,33 +364,42 @@ protocol = soxy.Socks5()
 protocol = soxy.Socks5(auther=auther)
 
 # SOCKS5h (with domain resolution on proxy side)
-protocol = soxy.Socks5(resolver=resolver, auther=auther)
+protocol = soxy.Socks5(resolver=resolver)
 ```
 
 ## Development
+
+Development requires [uv](https://docs.astral.sh/uv/) and [just](https://github.com/casey/just).
 
 ### Development Installation
 
 ```bash
 git clone https://github.com/shpaker/soxyproxy.git
 cd soxyproxy
-pip install -e ".[dev]"
+uv sync
 ```
 
 ### Running Tests
 
 ```bash
-pytest
+# All tests (SOCKS integration tests require internet access)
+just tests
+
+# Without SOCKS integration tests
+just tests-ci
 ```
 
 ### Code Quality
 
 ```bash
+# Formatting
+just fmt
+
 # Linting
-ruff check .
+just lint
 
 # Type checking
-mypy soxy
+just mypy
 ```
 
 ## License

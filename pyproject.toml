@@ -1,7 +1,7 @@
 [project]
 name = "soxyproxy"
 version = "0.0.0"
-description = "Add your description here"
+description = "Asynchronous SOCKS4/SOCKS4a/SOCKS5/SOCKS5h proxy server written in pure Python"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = []
@@ -11,12 +11,14 @@ authors = [
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
+  "Framework :: AsyncIO",
   "Intended Audience :: Developers",
   "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Topic :: Internet :: Proxy Servers",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Typing :: Typed",
@@ -25,6 +27,8 @@ keywords = ["proxy", "socks", "socks4", "socks4a", "socks5", "socks5h"]
 
 [project.urls]
 Homepage = "https://github.com/shpaker/soxyproxy/"
+Repository = "https://github.com/shpaker/soxyproxy.git"
+Issues = "https://github.com/shpaker/soxyproxy/issues"
 
 [build-system]
 requires = ["hatchling"]
@@ -35,14 +39,14 @@ include = ["soxy"]
 
 [dependency-groups]
 dev = [
-  "pytest-asyncio>=1.3",
-  "pytest>=9.0",
-  "ruff>=0.14",
-  "pre-commit>=4.5",
-  "mypy>=1.19",
-    "httpx>=0.28.0",
-    "httpx-socks>=0.10",
-    "httpcore>=1.0.8",
+  "pytest-asyncio>=1.4",
+  "pytest>=9.1",
+  "ruff>=0.17",
+  "pre-commit>=4.7",
+  "mypy>=2.4",
+  "httpx>=0.28.1",
+  "httpx-socks>=0.13",
+  "httpcore>=1.0.9",
 ]
 
 [project.scripts]
@@ -56,7 +60,7 @@ exclude = [
 ]
 lint.flake8-tidy-imports.ban-relative-imports = "all"
 lint.ignore = [
-    "S101", # Too many arguments to function call
+    "S101", # Use of assert
     "TC001", # Move application import into type-checking block - too aggressive, breaks runtime
     "TC003", # Move standard library import into type-checking block - too aggressive, breaks runtime
     "UP040", # Type alias uses TypeAlias annotation - we need it for Python 3.14 compatibility
@@ -133,7 +137,6 @@ strict_optional = true
 [tool.pytest.ini_options]
 filterwarnings = [
     "ignore:coroutine 'async_main' was never awaited:RuntimeWarning",
-    "ignore:'return' in a 'finally' block:SyntaxWarning",
 ]
 asyncio_default_fixture_loop_scope = "function"
 asyncio_default_test_loop_scope = "function"
