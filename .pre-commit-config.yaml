@@ -6,10 +6,11 @@ repos:
 
 #  - repo: local
 #    hooks:
-#      - id: mypy
-#        name: mypy
-#        entry: python -m mypy
+#      - id: ty
+#        name: ty
+#        entry: uv run ty check soxy
 #        language: system
+#        pass_filenames: false
 #        'types_or': [ python, pyi ]
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: "v0.17.1"

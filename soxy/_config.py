@@ -224,40 +224,49 @@ class Config:
             raise ConfigError(section, msg)
         return SystemResolver(timeout=timeout)
 
-    def _create_auther(
+    def _auth_data(
         self,
-        protocol: str,
-    ) -> Socks4Auther | Socks5Auther | None:
+    ) -> dict[str, typing.Any] | None:
         """
-        Create auther from configuration dictionary.
+        Get auth section from configuration.
         Authentication is optional - if auth section is missing, returns None.
         """
         auth_data = self._proxy_data.get('auth')
         if not auth_data:
             return None
-
         if not isinstance(auth_data, dict):
             section = 'proxy'
             msg = 'Invalid auth configuration'
             raise ConfigError(section, msg)
+        return auth_data
 
-        # For SOCKS5: username -> password mapping
-        if protocol in ('socks5', 'socks5h'):
+    def _create_socks4_auther(
+        self,
+    ) -> Socks4Auther | None:
+        """
+        Create SOCKS4 auther: only username check (password is not used).
+        """
+        if (auth_data := self._auth_data()) is None:
+            return None
 
-            def socks5_auther(username: str, password: str) -> bool:
-                return auth_data.get(username) == password
+        def socks4_auther(username: str) -> bool:
+            return username in auth_data
 
-            return socks5_auther
+        return socks4_auther
 
-        # For SOCKS4: only username check (password not used)
-        if protocol in ('socks4', 'socks4a'):
+    def _create_socks5_auther(
+        self,
+    ) -> Socks5Auther | None:
+        """
+        Create SOCKS5 auther: username -> password mapping.
+        """
+        if (auth_data := self._auth_data()) is None:
+            return None
 
-            def socks4_auther(username: str) -> bool:
-                return username in auth_data
+        def socks5_auther(username: str, password: str) -> bool:
+            return auth_data.get(username) == password
 
-            return socks4_auther
-
-        return None
+        return socks5_auther
 
     @property
     def socks(
@@ -267,22 +276,12 @@ class Config:
             'protocol',
             _DEFAULTS_PROXY_SECTION['protocol'],
         )
-
-        # Determine if resolver is needed
-        needs_resolver = protocol in ('socks4a', 'socks5h')
-        resolver = self._create_resolver() if needs_resolver else None
-
-        # Create auther if auth section is present (optional)
-        auther = self._create_auther(protocol)
-
-        socks_cls: type[Socks4] | type[Socks5]
+        # resolver is needed for domain names only
+        resolver = self._create_resolver() if protocol in ('socks4a', 'socks5h') else None
         if protocol in ('socks4', 'socks4a'):
-            socks_cls = Socks4
-        elif protocol in ('socks5', 'socks5h'):
-            socks_cls = Socks5
-        else:
-            section = 'proxy'
-            msg = 'Unsupported SOCKS protocol'
-            raise ConfigError(section, msg)
-
-        return socks_cls(auther=auther, resolver=resolver)  # type: ignore[return-value]
+            return Socks4(auther=self._create_socks4_auther(), resolver=resolver)
+        if protocol in ('socks5', 'socks5h'):
+            return Socks5(auther=self._create_socks5_auther(), resolver=resolver)
+        section = 'proxy'
+        msg = 'Unsupported SOCKS protocol'
+        raise ConfigError(section, msg)

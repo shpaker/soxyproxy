@@ -128,9 +128,7 @@ class Socks4(
         :param auther: Optional authorizer for SOCKS4.
         :param resolver: Optional resolver for domain name resolution.
         """
-        self._auther: Socks4AsyncAuther | None = (
-            auther_wrapper(auther) if auther else None  # type: ignore[assignment]
-        )
+        self._auther: Socks4AsyncAuther | None = auther_wrapper(auther) if auther else None
         super().__init__(
             resolver=resolver,
         )
@@ -315,9 +313,7 @@ class Socks5(
         super().__init__(
             resolver=resolver,
         )
-        self._auther: Socks5AsyncAuther | None = (
-            auther_wrapper(auther) if auther else None  # type: ignore[assignment]
-        )
+        self._auther: Socks5AsyncAuther | None = auther_wrapper(auther) if auther else None
         self._allowed_auth_method = Socks5AuthMethod.USERNAME if auther else Socks5AuthMethod.NO_AUTHENTICATION
 
     async def __call__(

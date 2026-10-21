@@ -43,7 +43,7 @@ dev = [
   "pytest>=9.1",
   "ruff>=0.17",
   "pre-commit>=4.7",
-  "mypy>=2.4",
+  "ty>=0.0.90",
   "httpx>=0.28.1",
   "httpx-socks>=0.13",
   "httpcore>=1.0.9",
@@ -128,11 +128,8 @@ lint.select = [
 quote-style = "single"
 docstring-code-format = true
 
-[tool.mypy]
-python_version = "3.14"
-follow_imports = "silent"
-check_untyped_defs = true
-strict_optional = true
+[tool.ty.environment]
+python-version = "3.14"
 
 [tool.pytest.ini_options]
 filterwarnings = [

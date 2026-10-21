@@ -401,8 +401,8 @@ just fmt
 # Linting
 just lint
 
-# Type checking
-just mypy
+# Type checking (ty)
+just typecheck
 ```
 
 ## License
