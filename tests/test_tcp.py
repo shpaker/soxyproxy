@@ -62,7 +62,7 @@ async def test_tcp_transport_flow() -> None:
     async def start_messaging(client: Connection, remote: Connection) -> None:
         pass
 
-    async def on_remote_unreachable(client: Connection, addr: Address) -> None:
+    async def on_remote_unreachable(client: Connection, addr: Address, error: OSError) -> None:
         pass
 
     transport: TcpTransport = TcpTransport(port=0)

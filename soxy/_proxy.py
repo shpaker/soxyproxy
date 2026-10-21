@@ -1,4 +1,5 @@
 import asyncio
+import socket
 import types
 import typing
 
@@ -33,12 +34,14 @@ class Proxy:
         logger.info(f'initialized {transport} for {protocol}')
         self._transport = transport
         self._ruleset = ruleset
+        self._server: asyncio.Server | None = None
 
     async def __aenter__(
         self,
-    ) -> asyncio.Server:
+    ) -> typing.Self:
         logger.info(f'{self} start serving')
-        return await self._transport.__aenter__()
+        self._server = await self._transport.__aenter__()
+        return self
 
     async def __aexit__(
         self,
@@ -47,11 +50,35 @@ class Proxy:
         exc_traceback: types.TracebackType | None,
     ) -> None:
         logger.info(f'{self} shutdown')
+        self._server = None
         await self._transport.__aexit__(
             exc_type,
             exc_value,
             exc_traceback,
         )
+
+    @property
+    def sockets(
+        self,
+    ) -> tuple[socket.socket, ...]:
+        if self._server is None:
+            msg = f'{self} is not started'
+            raise RuntimeError(msg)
+        return self._server.sockets
+
+    async def serve_forever(
+        self,
+    ) -> None:
+        """
+        Serve until cancelled. Connections are closed on exiting the context manager.
+
+        asyncio.Server.serve_forever() is not used here because on cancellation
+        it waits for all client connections to be closed by peers.
+        """
+        if self._server is None:
+            msg = f'{self} is not started'
+            raise RuntimeError(msg)
+        await asyncio.get_running_loop().create_future()
 
     @classmethod
     def from_config(
@@ -103,16 +130,18 @@ class Proxy:
     ) -> None:
         await self._protocol.success(
             client=client,
-            destination=remote.address,
+            destination=remote.local_address,
         )
 
     async def _on_remote_connection_unreachable_cb(
         self,
         client: Connection,
         destination: Address,
+        error: OSError,
     ) -> None:
+        logger.info(f'{client} remote {destination.ip}:{destination.port} unreachable ({error!r})')
         await self._protocol.target_unreachable(
             client=client,
             destination=destination,
+            error=error,
         )
-        logger.info(f'{client} remote {destination.ip}:{destination.port} unreachable')

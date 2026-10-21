@@ -1,10 +1,11 @@
-from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
-from typing import TYPE_CHECKING
+import typing
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address
 
 from soxy._errors import PackageError
+from soxy._types import Address
 
-if TYPE_CHECKING:
-    from soxy._types import Address, IPvAnyAddress, IPvAnyNetwork, SocksVersions
+if typing.TYPE_CHECKING:
+    from soxy._types import IPvAnyAddress, IPvAnyNetwork, SocksVersions
 
 
 def match_addresses(
@@ -16,6 +17,22 @@ def match_addresses(
     if isinstance(match_with, IPv4Network | IPv6Network):
         return address.ip in match_with
     return False
+
+
+def address_from_sockaddr(
+    sockaddr: tuple[typing.Any, ...],
+) -> Address:
+    """
+    Build Address from socket address (2-tuple for IPv4, 4-tuple for IPv6).
+    IPv4-mapped IPv6 addresses are converted to IPv4.
+    """
+    ip = ip_address(sockaddr[0])
+    if isinstance(ip, IPv6Address) and ip.ipv4_mapped is not None:
+        ip = ip.ipv4_mapped
+    return Address(
+        ip=ip,
+        port=sockaddr[1],
+    )
 
 
 def port_from_bytes(

@@ -137,10 +137,10 @@ async def test_socks4(
         ),
     ) as client:
         if exc is None:
-            await client.get('https://httbin.org/get')
+            await client.get('https://httpbin.org/get')
             return
         with pytest.raises(exc):
-            await client.get('https://httbin.org/get')
+            await client.get('https://httpbin.org/get')
 
 
 @pytest.mark.parametrize(
@@ -220,7 +220,7 @@ async def test_socks5(
         ),
     ) as client:
         if exc is None:
-            await client.get('https://httbin.org/get')
+            await client.get('https://httpbin.org/get')
             return
         with pytest.raises(exc):
-            await client.get('https://httbin.org/get')
+            await client.get('https://httpbin.org/get')

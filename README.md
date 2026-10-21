@@ -172,8 +172,11 @@ bob = "secret456"
 
 Transport layer settings:
 
-- `host` (string): IP address to listen on (e.g., `"127.0.0.1"` or `"0.0.0.0"`)
+- `host` (string): IP address to listen on (e.g., `"127.0.0.1"`, `"0.0.0.0"` or `"::"`)
 - `port` (number): Port to listen on (e.g., `1080`)
+- `handshake_timeout` (number, optional): Seconds a client has to complete the SOCKS handshake (default `30`)
+- `connect_timeout` (number, optional): Seconds to wait for connecting to the destination (default `10`)
+- `shutdown_timeout` (number, optional): Seconds to wait for active connections to close on shutdown (default `5`)
 
 #### `[ruleset]`
 
@@ -188,6 +191,8 @@ Each rule contains:
 
 - `from`: Source IP address or network (IPv4/IPv6 address or CIDR)
 - `to`: Destination IP address, network, or domain name (only for proxying rules)
+
+Block rules take precedence over allow rules. Connections that don't match any allow rule are rejected.
 
 ### Full Configuration Example
 

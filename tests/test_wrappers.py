@@ -1,3 +1,4 @@
+import threading
 from ipaddress import IPv4Address
 
 import pytest
@@ -65,3 +66,46 @@ async def test_resolver_wrapper_exception() -> None:
     wrapped_resolver = resolver_wrapper(sync_resolver)
     result = await wrapped_resolver('localhost')
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_resolver_wrapper_async_callable_object() -> None:
+    class Resolver:
+        async def __call__(self, name: str) -> IPv4Address:
+            return IPv4Address('127.0.0.1')
+
+    wrapped_resolver = resolver_wrapper(Resolver())
+    assert await wrapped_resolver('localhost') == IPv4Address('127.0.0.1')
+
+
+@pytest.mark.asyncio
+async def test_resolver_wrapper_sync_runs_in_thread() -> None:
+    loop_thread = threading.get_ident()
+    resolver_thread = None
+
+    def sync_resolver(name: str) -> IPv4Address:
+        nonlocal resolver_thread
+        resolver_thread = threading.get_ident()
+        return IPv4Address('127.0.0.1')
+
+    await resolver_wrapper(sync_resolver)('localhost')
+    assert resolver_thread is not None
+    assert resolver_thread != loop_thread
+
+
+@pytest.mark.asyncio
+async def test_resolver_wrapper_invalid_result() -> None:
+    def sync_resolver(name: str) -> IPv4Address:
+        return '127.0.0.1'  # type: ignore[return-value]
+
+    assert await resolver_wrapper(sync_resolver)('localhost') is None
+
+
+@pytest.mark.asyncio
+async def test_auther_wrapper_async_callable_object() -> None:
+    class Auther:
+        async def __call__(self, username: str, password: str) -> bool:
+            return username == 'user'
+
+    assert await auther_wrapper(Auther())('user', 'pass') is True
+    assert await auther_wrapper(Auther())('nobody', 'pass') is False

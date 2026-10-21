@@ -1,13 +1,21 @@
 import asyncio
 import types
 import typing
-from contextlib import suppress
 
 from soxy._logger import logger
 from soxy._types import Connection
 
 
 class Session:
+    """
+    Bidirectional relay between client and remote connections.
+
+    Each direction is pumped independently, so backpressure in one direction
+    doesn't stall the other. EOF from one side is propagated to the other side
+    as half-close; the session finishes when both directions are closed or
+    when any of connections fails.
+    """
+
     def __init__(
         self,
         client: Connection,
@@ -15,14 +23,12 @@ class Session:
     ) -> None:
         self._client = client
         self._remote = remote
-        self._tasks: dict[Connection, asyncio.Task[bytes]] = {}
-        self._finished: bool = True
+        self._sent = 0
+        self._received = 0
 
     async def __aenter__(
         self,
     ) -> typing.Self:
-        self._finished = False
-        self._create_tasks()
         return self
 
     async def __aexit__(
@@ -31,64 +37,41 @@ class Session:
         exc_value: BaseException | None,
         exc_traceback: types.TracebackType | None,
     ) -> None:
-        for task in self._tasks.values():
-            if not task.cancelled():
-                task.cancel()
-        for task in self._tasks.values():
-            if not task.done():
-                with suppress(asyncio.CancelledError, Exception):
-                    await task
-
-    def _create_tasks(
-        self,
-    ) -> None:
-        self._tasks = {
-            self._client: asyncio.create_task(self._client.read()),
-            self._remote: asyncio.create_task(self._remote.read()),
-        }
+        logger.info(f'{self._client} session closed (sent {self._sent} bytes, received {self._received} bytes)')
 
     @property
-    def connections(
+    def sent(
         self,
-    ) -> set[Connection]:
-        return set(self._tasks.keys())
+    ) -> int:
+        return self._sent
 
-    async def _wait_tasks(self) -> None:
-        done, _ = await asyncio.wait(
-            self._tasks.values(),
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-        for conn, task in self._tasks.items():
-            if task not in done:
-                continue
-            another: Connection = (self.connections - {conn}).pop()
-            try:
-                data = task.result()
-            except Exception as exc:  # noqa: BLE001
-                logger.exception(f'{conn} read error: {exc}')
-                self._finished = True
-                return
-            if not data:
-                self._finished = True
-                return
-            self._tasks[conn] = asyncio.create_task(conn.read())
-            try:
-                await another.write(data)
-            except Exception as exc:  # noqa: BLE001
-                logger.exception(f'{another} write error: {exc}')
-                self._finished = True
-                return
-            if conn is self._client:
-                logger.info(f'{self._client} -> {len(data)} bytes -> {self._remote}')
-            else:
-                logger.info(f'{self._client} <- {len(data)} bytes <- {self._remote}')
+    @property
+    def received(
+        self,
+    ) -> int:
+        return self._received
 
     async def start(
         self,
     ) -> None:
         try:
-            while self._finished is False:
-                await self._wait_tasks()
-        except Exception as exc:  # noqa: BLE001
-            logger.exception(f'Session error: {exc}')
-            self._finished = True
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task(self._pump(self._client, self._remote))
+                tg.create_task(self._pump(self._remote, self._client))
+        except* OSError as group:
+            logger.info(f'{self._client} session interrupted ({group.exceptions[0]!r})')
+
+    async def _pump(
+        self,
+        source: Connection,
+        destination: Connection,
+    ) -> None:
+        while data := await source.read():
+            await destination.write(data)
+            if source is self._client:
+                self._sent += len(data)
+                logger.debug(f'{self._client} -> {len(data)} bytes -> {self._remote}')
+            else:
+                self._received += len(data)
+                logger.debug(f'{self._client} <- {len(data)} bytes <- {self._remote}')
+        await destination.write_eof()
