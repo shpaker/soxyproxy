@@ -31,12 +31,13 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY_HOST }}/${{ github.repository }}
+          # the first semver tag defines the version output (build-arg and image label)
           tags: |
-            type=raw,value=latest
-            type=sha,prefix=,format=short
-            type=semver,pattern={{major}}
-            type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=,format=short
+            type=raw,value=latest
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
