@@ -13,6 +13,7 @@ jobs:
       matrix:
         just-trigger:
           - "lint"
+          - "typecheck"
           - "tests-ci"
         python-version:
           - "3.14"
