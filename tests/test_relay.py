@@ -355,3 +355,69 @@ async def test_shutdown_with_active_session() -> None:
                     await serve_task
         assert await asyncio.wait_for(reader.read(), timeout=1) == b''
         await close_writer(writer)
+
+
+def socks5_domain_request(
+    domain_name: str,
+    port: int,
+) -> bytes:
+    return b'\x05\x01\x00\x03' + bytes([len(domain_name)]) + domain_name.encode() + struct.pack('!H', port)
+
+
+@pytest.mark.asyncio
+async def test_socks5h_system_resolver() -> None:
+    protocol = soxy.Socks5(resolver=soxy.SystemResolver())
+    async with run_upstream(echo) as upstream_port, run_proxy(protocol=protocol) as proxy_port:
+        reader, writer = await asyncio.open_connection('127.0.0.1', proxy_port)
+        writer.write(GREETING + socks5_domain_request('localhost', upstream_port) + b'ping')
+        assert await reader.readexactly(2) == b'\x05\x00'
+        reply, _, _ = await read_socks5_reply(reader)
+        assert reply == Socks5ConnectionReply.SUCCEEDED
+        assert await asyncio.wait_for(reader.readexactly(4), timeout=1) == b'ping'
+        await close_writer(writer)
+
+
+@pytest.mark.asyncio
+async def test_socks4a_system_resolver() -> None:
+    protocol = soxy.Socks4(resolver=soxy.SystemResolver())
+    async with run_upstream(echo) as upstream_port, run_proxy(protocol=protocol) as proxy_port:
+        reader, writer = await asyncio.open_connection('127.0.0.1', proxy_port)
+        writer.write(b'\x04\x01' + struct.pack('!H', upstream_port) + b'\x00\x00\x00\x01\x00localhost\x00ping')
+        reply = await reader.readexactly(8)
+        assert reply[1] == Socks4Reply.GRANTED
+        assert await asyncio.wait_for(reader.readexactly(4), timeout=1) == b'ping'
+        await close_writer(writer)
+
+
+@pytest.mark.skipif(not ipv6_available(), reason='IPv6 is not available')
+@pytest.mark.asyncio
+async def test_socks5h_ipv6_only_domain(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def getaddrinfo(host: str, *args: object, **kwargs: object) -> list[typing.Any]:  # noqa: ARG001
+        assert host == 'ipv6only.test'
+        return [(socket.AF_INET6, socket.SOCK_STREAM, 6, '', ('::1', 0, 0, 0))]
+
+    # numeric hosts don't go through getaddrinfo in asyncio, so only the resolver is affected
+    monkeypatch.setattr(asyncio.get_running_loop(), 'getaddrinfo', getaddrinfo)
+    protocol = soxy.Socks5(resolver=soxy.SystemResolver())
+    async with run_upstream(echo, host='::1') as upstream_port, run_proxy(protocol=protocol) as proxy_port:
+        reader, writer = await asyncio.open_connection('127.0.0.1', proxy_port)
+        writer.write(GREETING + socks5_domain_request('ipv6only.test', upstream_port))
+        assert await reader.readexactly(2) == b'\x05\x00'
+        reply, ip, _ = await read_socks5_reply(reader)
+        assert reply == Socks5ConnectionReply.SUCCEEDED
+        assert ip == ipaddress.IPv6Address('::1')
+        writer.write(b'ping')
+        assert await asyncio.wait_for(reader.readexactly(4), timeout=1) == b'ping'
+        await close_writer(writer)
+
+
+@pytest.mark.asyncio
+async def test_socks5h_unresolvable_domain() -> None:
+    protocol = soxy.Socks5(resolver=soxy.SystemResolver(timeout=2))
+    async with run_proxy(protocol=protocol) as proxy_port:
+        reader, writer = await asyncio.open_connection('127.0.0.1', proxy_port)
+        writer.write(GREETING + socks5_domain_request('does-not-exist.invalid', 80))
+        assert await reader.readexactly(2) == b'\x05\x00'
+        reply, _, _ = await asyncio.wait_for(read_socks5_reply(reader), timeout=5)
+        assert reply == Socks5ConnectionReply.HOST_UNREACHABLE
+        await close_writer(writer)

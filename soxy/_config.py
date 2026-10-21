@@ -1,11 +1,10 @@
-import asyncio
 import tomllib
 import typing
 from contextlib import suppress
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
-from socket import gethostbyname
 
 from soxy._errors import ConfigError
+from soxy._resolver import SystemResolver
 from soxy._ruleset import ConnectingRule, ProxyingRule, Ruleset
 from soxy._socks import Socks4, Socks5
 from soxy._tcp import TcpTransport
@@ -21,6 +20,7 @@ if typing.TYPE_CHECKING:
         Transport,
     )
 
+_DEFAULT_RESOLVE_TIMEOUT = 10
 _DEFAULTS_PROXY_SECTION = {
     'protocol': 'socks5',
     'transport': 'tcp',
@@ -215,15 +215,14 @@ class Config:
         self,
     ) -> Resolver:
         """
-        Create a resolver function using OS socket.gethostbyname.
-        The blocking call is executed in a thread pool to avoid blocking the event loop.
+        Create a system resolver (getaddrinfo) with timeout from configuration.
         """
-
-        async def resolver(domain_name: str) -> IPv4Address:
-            ip_str = await asyncio.to_thread(gethostbyname, domain_name)
-            return IPv4Address(ip_str)
-
-        return resolver
+        timeout = self._proxy_data.get('resolve_timeout', _DEFAULT_RESOLVE_TIMEOUT)
+        if isinstance(timeout, bool) or not isinstance(timeout, int | float) or timeout <= 0:
+            section = 'proxy'
+            msg = 'resolve_timeout must be a positive number'
+            raise ConfigError(section, msg)
+        return SystemResolver(timeout=timeout)
 
     def _create_auther(
         self,

@@ -109,3 +109,18 @@ async def test_auther_wrapper_async_callable_object() -> None:
 
     assert await auther_wrapper(Auther())('user', 'pass') is True
     assert await auther_wrapper(Auther())('nobody', 'pass') is False
+
+
+@pytest.mark.asyncio
+async def test_resolver_wrapper_async_callable_object_runs_in_loop() -> None:
+    loop_thread = threading.get_ident()
+    resolver_thread = None
+
+    class Resolver:
+        async def __call__(self, name: str) -> IPv4Address:
+            nonlocal resolver_thread
+            resolver_thread = threading.get_ident()
+            return IPv4Address('127.0.0.1')
+
+    assert await resolver_wrapper(Resolver())('localhost') == IPv4Address('127.0.0.1')
+    assert resolver_thread == loop_thread

@@ -82,7 +82,6 @@ curl -x "socks5://alice:password123@127.0.0.1:1080" https://google.com -v
 import asyncio
 import logging
 from ipaddress import IPv4Address, IPv4Network
-from socket import gethostbyname
 
 import soxy
 
@@ -94,16 +93,11 @@ def auther(username: str, password: str) -> bool:
     return username == 'user' and password == 'pass'
 
 
-def resolver(domain_name: str) -> IPv4Address:
-    """Domain name resolver."""
-    return IPv4Address(gethostbyname(domain_name))
-
-
 async def main() -> None:
     async with soxy.Proxy(
         protocol=soxy.Socks5(
             auther=auther,
-            resolver=resolver,  # Required for SOCKS5h and SOCKS4a
+            resolver=soxy.SystemResolver(),  # Required for SOCKS5h and SOCKS4a
         ),
         transport=soxy.TcpTransport(host='127.0.0.1', port=1080),
         ruleset=soxy.Ruleset(
@@ -153,6 +147,7 @@ Proxy server settings:
 
 - `protocol` (string): SOCKS protocol (`"socks4"`, `"socks4a"`, `"socks5"`, `"socks5h"`), default `"socks5"`. With `"socks4a"` and `"socks5h"` domain names are resolved on the proxy side
 - `transport` (string): Transport protocol (currently only `"tcp"`), default `"tcp"`
+- `resolve_timeout` (number, optional): Seconds to wait for resolving a domain name with `"socks4a"` and `"socks5h"` (default `10`)
 
 #### `[proxy.auth]` (optional)
 
@@ -300,7 +295,15 @@ protocol = soxy.Socks5(auther=async_auther)  # or sync_auther
 
 ### Custom Resolver
 
-For working with domain names (SOCKS5h, SOCKS4a), a resolver is required. It can be a regular or an async function; regular functions are run in a separate thread, so blocking calls like `socket.gethostbyname` don't block the event loop:
+For working with domain names (SOCKS5h, SOCKS4a), a resolver is required. The built-in `soxy.SystemResolver` uses the system resolver (`getaddrinfo`) with a timeout and supports both IPv4 and IPv6 (IPv4 is preferred when a domain has both):
+
+```python
+protocol = soxy.Socks5(
+    resolver=soxy.SystemResolver(timeout=5),
+)
+```
+
+A custom resolver can be a regular or an async function; regular functions are run in a separate thread, so blocking calls don't block the event loop:
 
 ```python
 async def custom_resolver(domain_name: str) -> IPv4Address | None:
@@ -355,7 +358,7 @@ ruleset = soxy.Ruleset(
 protocol = soxy.Socks4()
 
 # SOCKS4a (with domain name support)
-protocol = soxy.Socks4(resolver=resolver)
+protocol = soxy.Socks4(resolver=soxy.SystemResolver())
 
 # SOCKS5 (without authentication)
 protocol = soxy.Socks5()
@@ -364,7 +367,7 @@ protocol = soxy.Socks5()
 protocol = soxy.Socks5(auther=auther)
 
 # SOCKS5h (with domain resolution on proxy side)
-protocol = soxy.Socks5(resolver=resolver)
+protocol = soxy.Socks5(resolver=soxy.SystemResolver())
 ```
 
 ## Development

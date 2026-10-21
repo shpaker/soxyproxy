@@ -4,7 +4,10 @@ import types
 import typing
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
 
-Resolver: typing.TypeAlias = typing.Callable[[str], IPv4Address | typing.Awaitable[IPv4Address]]
+Resolver: typing.TypeAlias = typing.Callable[
+    [str],
+    IPv4Address | IPv6Address | typing.Awaitable[IPv4Address | IPv6Address | None] | None,
+]
 
 Socks4Auther: typing.TypeAlias = typing.Callable[[str], bool]
 Socks4AsyncAuther: typing.TypeAlias = typing.Callable[[str], typing.Awaitable[bool]]

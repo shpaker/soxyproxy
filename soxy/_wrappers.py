@@ -14,6 +14,14 @@ from soxy._types import (
 )
 
 
+def _is_async_callable(
+    func: typing.Callable[..., typing.Any],
+) -> bool:
+    return inspect.iscoroutinefunction(func) or inspect.iscoroutinefunction(
+        getattr(func, '__call__', None),  # noqa: B004
+    )
+
+
 def auther_wrapper(
     _func: Socks4Auther | Socks5Auther | Socks4AsyncAuther | Socks5AsyncAuther,
 ) -> Socks4AsyncAuther | Socks5AsyncAuther:
@@ -40,8 +48,8 @@ def resolver_wrapper(
         name: str,
     ) -> IPvAnyAddress | None:
         try:
-            if inspect.iscoroutinefunction(_func):
-                result = await _func(name)
+            if _is_async_callable(_func):
+                result = await _func(name)  # type: ignore[misc]
             else:
                 # sync resolvers usually block (e.g. socket.gethostbyname), so keep them off the event loop
                 result = await asyncio.to_thread(_func, name)
